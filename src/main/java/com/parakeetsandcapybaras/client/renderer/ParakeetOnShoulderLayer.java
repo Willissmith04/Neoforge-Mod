@@ -39,6 +39,7 @@ public class ParakeetOnShoulderLayer extends RenderLayer<PlayerRenderState, Play
         super(renderer);
         this.model = new ParakeetModel(modelSet.bakeLayer(ModModelLayers.PARAKEET));
         this.parakeetState.pose = ParrotModel.Pose.ON_SHOULDER;
+        this.parakeetState.idleAnimationState.start(0); // keep gently moving while on the shoulder
     }
 
     /** Registered in ClientModEvents. Runs every frame for every player that is drawn. */

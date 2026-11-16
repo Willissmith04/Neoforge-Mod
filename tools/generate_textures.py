@@ -1,5 +1,5 @@
 """
-Generates all of the mod's textures (PNG images) as pixel art.
+Generates the capybara and bird cage textures (PNG images) as pixel art.
 
 You do NOT need to run this to play or build the mod - the finished PNG files are already in
 src/main/resources/assets/parakeetsandcapybaras/textures/. It is here so you can see how they were
@@ -61,117 +61,8 @@ def fill(img, rect, color_fn):
             img.putpixel((x0 + x, y0 + y), color_fn(x, y, w, h))
 
 
-# ---------------------------------------------------------------------------------------------
-# Parakeets (ParakeetModel, 64x32 texture)
-#
-# Style: chunky budgie look - a solid body colour, a checkered face, big checkered wing panels,
-# a black eye with a dark cheek patch, a blue band (the cere) above a yellow beak and grey legs.
-#
-# Where each box of ParakeetModel lives on the texture (texOffs, size W x H x D):
-#   body (0,0) 6x7x5     wings (22,0) 1x8x4    head (32,0) 5x5x5    cap (0,12) 6x1x6
-#   tail (24,12) 3x1x4   cere (38,12) 3x1x1    beak (38,15) 2x2x1   legs (46,12) 1x2x2
-# ---------------------------------------------------------------------------------------------
-PARAKEET_COLOURS = {
-    # The 5 budgie colours from the nm_budgie configs.
-    #                body      face      face_dk   wing_lt   wing_dk   cheek     eye       cere
-    "olive":        (0x5E7428, 0xE2D85A, 0x5C5622, 0xD8D060, 0x4E4A1E, 0x3A3A8A, 0x1A1A1A, 0x3C46C8),
-    "sky_blue":     (0x4A7EDC, 0xF0F0F0, 0x5A5A5A, 0xC8C8C8, 0x6A6A6A, 0x2A2A80, 0x1A1A1A, 0x3C46C8),
-    "white":        (0xF2F2EE, 0xFFFFFF, 0xD0D0CC, 0xFAFAF6, 0xCFCFCA, 0xE6E6E6, 0xB0303A, 0xE0B4AC),
-    "yellow":       (0xF0DC3C, 0xFFF4A0, 0xD8C860, 0xFFF0A0, 0xD6C250, 0xF4F0E0, 0xB0303A, 0xE0A8A0),
-    "blue_spangle": (0x5A90E0, 0xF6F6F6, 0x3A3A3A, 0xF4F4F4, 0x2E2E2E, 0x8A8AC8, 0x1A1A1A, 0x3C46C8),
-}
-# "Spangle" budgies have light wing feathers with small dark marks, instead of the normal pattern.
-SPANGLE = {"blue_spangle"}
-BEAK = rgb(0xE6B634)
-BEAK_DARK = rgb(0xC08E1E)
-LEGS = rgb(0xB4ACBC)
-
-
-def mix(a, b, t):
-    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3)) + (255,)
-
-
-def make_parakeet(name, colours):
-    body, face, face_dk, wing_lt, wing_dk, cheek, eye, cere = (rgb(c) for c in colours)
-    face_mid = mix(face, face_dk, 0.45)
-    body_dark = shade(body, -28)
-    img = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
-
-    def checker(light, dark):
-        return lambda x, y, w, h: light if (x + y) % 2 == 0 else dark
-
-    def body_shaded(x, y, w, h):
-        # lighter at the top of the body, darker towards the bottom
-        return shade(body, 14 - int(30 * y / max(1, h - 1)))
-
-    # Body (0,0) 6x7x5: one solid colour with soft shading
-    b = Box(0, 0, 6, 7, 5).faces()
-    fill(img, b["top"], lambda *a: shade(body, 16))
-    fill(img, b["bottom"], lambda *a: body_dark)
-    for key in ("front", "right", "left"):
-        fill(img, b[key], body_shaded)
-    fill(img, b["back"], lambda x, y, w, h: shade(body_dark, 8 - int(16 * y / (h - 1))))
-
-    # Head (32,0) 5x5x5: face colour at the front, checkered at the back, eye and cheek patch
-    head = Box(32, 0, 5, 5, 5).faces()
-    fill(img, head["front"], lambda *a: face)
-    fill(img, head["bottom"], lambda *a: face)
-    fill(img, head["top"], lambda *a: face)
-    fill(img, head["back"], lambda x, y, w, h: face_dk if (x + y) % 2 == 0 else face_mid)
-    side = [  # [row][column], column 0 = back of the head, column 4 = front (next to the beak)
-        ["dk", "mid", "dk", "face", "face"],
-        ["mid", "dk", "eye", "face", "face"],
-        ["dk", "mid", "face", "cheek", "face"],
-        ["mid", "face", "face", "face", "face"],
-        ["face", "face", "face", "face", "face"],
-    ]
-    pick = {"dk": face_dk, "mid": face_mid, "face": face, "eye": eye, "cheek": cheek}
-    fill(img, head["right"], lambda x, y, w, h: pick[side[y][x]])
-    fill(img, head["left"], lambda x, y, w, h: pick[side[y][w - 1 - x]])
-
-    # Cap (0,12) 6x1x6: flat top of the head, face colour at the front, stripes at the back
-    cap = Box(0, 12, 6, 1, 6).faces()
-    fill(img, cap["top"], lambda x, y, w, h: face if y >= 3 else (face_mid if (x + y) % 2 else face_dk))
-    fill(img, cap["bottom"], lambda *a: face)
-    fill(img, cap["front"], lambda *a: face)
-    fill(img, cap["back"], checker(face_dk, face_mid))
-    fill(img, cap["right"], lambda x, y, w, h: face if x >= 3 else face_mid)
-    fill(img, cap["left"], lambda x, y, w, h: face if x <= 2 else face_mid)
-
-    # Cere (38,12) 3x1x1: the blue band above the beak
-    for f in Box(38, 12, 3, 1, 1).faces().values():
-        fill(img, f, lambda x, y, w, h: shade(cere, 18) if y == 0 and h == 1 and w == 3 else cere)
-
-    # Beak (38,15) 2x2x1
-    for f in Box(38, 15, 2, 2, 1).faces().values():
-        fill(img, f, lambda x, y, w, h: BEAK_DARK if y == h - 1 and h > 1 else BEAK)
-
-    # Wings (22,0) 1x8x4: big checkered panels, darker at the wing tips
-    wing = Box(22, 0, 1, 8, 4).faces()
-
-    def wing_px(x, y, w, h):
-        light, dark = (wing_lt, wing_dk) if y < h - 2 else (shade(wing_lt, -40), shade(wing_dk, -25))
-        if name in SPANGLE:
-            # mostly light feathers with a dark mark on every other feather
-            return dark if (y % 2 == 0 and x % 2 == (y // 2) % 2) else light
-        return light if (x + y) % 2 == 0 else dark
-
-    fill(img, wing["right"], wing_px)
-    fill(img, wing["left"], wing_px)
-    for key in ("top", "bottom", "front", "back"):
-        fill(img, wing[key], lambda *a: wing_dk)
-
-    # Tail (24,12) 3x1x4: dark body colour
-    for f in Box(24, 12, 3, 1, 4).faces().values():
-        fill(img, f, lambda *a: body_dark)
-
-    # Legs (46,12) 1x2x2
-    for f in Box(46, 12, 1, 2, 2).faces().values():
-        fill(img, f, lambda x, y, w, h: shade(LEGS, -20) if y == h - 1 and h > 1 else LEGS)
-
-    out = os.path.join(ROOT, "entity", "parakeet", f"parakeet_{name}.png")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    img.save(out)
+# Parakeet textures are NOT made here: they come from the budgie Blockbench models, see
+# tools/convert_budgie_models.py.
 
 
 # ---------------------------------------------------------------------------------------------
@@ -315,8 +206,6 @@ def make_cage(name, colours):
 
 
 if __name__ == "__main__":
-    for variant, colours in PARAKEET_COLOURS.items():
-        make_parakeet(variant, colours)
     make_capybara()
     for metal, colours in CAGE_METALS.items():
         make_cage(metal, colours)

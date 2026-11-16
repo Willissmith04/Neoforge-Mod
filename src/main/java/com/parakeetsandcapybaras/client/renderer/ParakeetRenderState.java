@@ -2,15 +2,22 @@ package com.parakeetsandcapybaras.client.renderer;
 
 import com.parakeetsandcapybaras.entity.Parakeet;
 import net.minecraft.client.renderer.entity.state.ParrotRenderState;
+import net.minecraft.world.entity.AnimationState;
 
 /**
- * The parakeet uses the same poses as the parrot, so it extends the parrot's render state
- * (pose, wing flapping...) and adds the parakeet colour.
+ * Everything the parakeet model needs to draw one frame. It extends the parrot's render state
+ * (pose, wing flapping...) because the parakeet uses the same poses, and adds the colour and the
+ * animations that are playing.
  */
 public class ParakeetRenderState extends ParrotRenderState {
-    public Parakeet.Variant parakeetVariant = Parakeet.Variant.OLIVE;
-    /** The trick being played (bite / dance / preen), or null. */
-    public Parakeet.Trick trick;
-    /** How many ticks the trick has been playing (with fractions for smooth animation). */
-    public float trickTime;
+    public Parakeet.Variant parakeetVariant = Parakeet.Variant.GREEN;
+
+    public final AnimationState idleAnimationState = new AnimationState();
+    public final AnimationState biteAnimationState = new AnimationState();
+    public final AnimationState danceAnimationState = new AnimationState();
+    public final AnimationState preenAnimationState = new AnimationState();
+    public final AnimationState hurtAnimationState = new AnimationState();
+    public final AnimationState deathAnimationState = new AnimationState();
+    /** Which of the 3 hurt animations to play (0, 1 or 2). */
+    public int hurtVariant;
 }

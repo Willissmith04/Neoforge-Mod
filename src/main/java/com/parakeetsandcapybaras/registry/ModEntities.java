@@ -22,7 +22,7 @@ public class ModEntities {
             "parakeet",
             Parakeet::new,
             MobCategory.CREATURE,
-            builder -> builder.sized(0.4F, 0.72F).eyeHeight(0.43F).passengerAttachments(0.37F).clientTrackingRange(8));
+            builder -> builder.sized(0.4F, 0.6F).eyeHeight(0.45F).passengerAttachments(0.55F).clientTrackingRange(8));
 
     // passengerAttachments = how high (in blocks) a baby capybara sits when riding on an adult's back.
     public static final Supplier<EntityType<Capybara>> CAPYBARA = ENTITY_TYPES.registerEntityType(

@@ -1,95 +1,62 @@
 package com.parakeetsandcapybaras.client.model;
 
+import com.parakeetsandcapybaras.ParakeetsAndCapybaras;
 import com.parakeetsandcapybaras.client.renderer.ParakeetRenderState;
-import com.parakeetsandcapybaras.entity.Parakeet;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.ParrotModel;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
-import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.Mth;
+import net.neoforged.neoforge.client.entity.animation.json.AnimationHolder;
+import net.neoforged.neoforge.client.entity.animation.json.AnimationLoader;
 
 /**
- * The chunky 3D model of the parakeet (budgie):
- * <ul>
- *   <li>a tall body that leans forward a little,</li>
- *   <li>a boxy head with a flat "cap" that sticks out over the face,</li>
- *   <li>a blue band above the beak (the cere) and a beak hanging below it,</li>
- *   <li>two big wing panels on the sides that reach down past the body,</li>
- *   <li>a short tail and two little legs.</li>
- * </ul>
- * It uses the same poses as the vanilla parrot (standing, flying, sitting, dancing and riding on
- * a shoulder), plus the bite / dance / preen tricks a budgie does when you right-click it.
+ * The budgie model.
  *
- * <p>Model coordinates are in pixels (16 pixels = 1 block). Y goes DOWN and y = 24 is the
- * ground. The texture is 64x32; see tools/generate_textures.py for where each box is painted.</p>
+ * <ul>
+ *   <li>The shape comes from {@link ParakeetGeometry} (converted from the nm_budgie Blockbench
+ *       models by tools/convert_budgie_models.py).</li>
+ *   <li>The animations (idle, walk, bite, dance, preen, hurt, death) are JSON files in
+ *       assets/parakeetsandcapybaras/neoforge/animations/entity/, loaded by NeoForge.</li>
+ *   <li>Flying (flapping wings) and sitting are done in code below, because the Blockbench
+ *       models don't have animations for those.</li>
+ * </ul>
  */
 public class ParakeetModel extends EntityModel<ParakeetRenderState> {
-    private static final float BODY_LEAN = 0.3F;
+    private static final AnimationHolder IDLE = animation("parakeet_idle");
+    private static final AnimationHolder WALK = animation("parakeet_walk");
+    private static final AnimationHolder BITE = animation("parakeet_bite");
+    private static final AnimationHolder DANCE = animation("parakeet_dance");
+    private static final AnimationHolder PREEN = animation("parakeet_preen");
+    private static final AnimationHolder DEATH = animation("parakeet_death");
+    private static final AnimationHolder[] HURT = {animation("parakeet_hurt_1"), animation("parakeet_hurt_2"), animation("parakeet_hurt_3")};
 
     private final ModelPart body;
     private final ModelPart head;
     private final ModelPart leftWing;
     private final ModelPart rightWing;
-    private final ModelPart tail;
     private final ModelPart leftLeg;
     private final ModelPart rightLeg;
 
     public ParakeetModel(ModelPart root) {
-        super(root);
+        // entityCutout (instead of the default "NoCull") shows each side of the flat wing and
+        // tail pieces with its own texture, the same way Blockbench shows them.
+        super(root, RenderType::entityCutout);
         this.body = root.getChild("body");
-        this.head = root.getChild("head");
+        this.head = this.body.getChild("head");
         this.leftWing = this.body.getChild("left_wing");
         this.rightWing = this.body.getChild("right_wing");
-        this.tail = this.body.getChild("tail");
-        this.leftLeg = root.getChild("left_leg");
-        this.rightLeg = root.getChild("right_leg");
+        this.leftLeg = this.body.getChild("left_leg");
+        this.rightLeg = this.body.getChild("right_leg");
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition mesh = new MeshDefinition();
-        PartDefinition root = mesh.getRoot();
+        return ParakeetGeometry.createBodyLayer();
+    }
 
-        // Body: 6 wide, 7 tall, 5 deep. Its pivot is at the hips so it can lean forward.
-        PartDefinition body = root.addOrReplaceChild("body",
-                CubeListBuilder.create().texOffs(0, 0).addBox(-3.0F, -7.0F, -2.5F, 6.0F, 7.0F, 5.0F),
-                PartPose.offsetAndRotation(0.0F, 22.0F, 1.0F, BODY_LEAN, 0.0F, 0.0F));
-
-        // Wings: tall checkered panels on each side of the body, reaching down past it.
-        CubeListBuilder wing = CubeListBuilder.create().texOffs(22, 0).addBox(-0.5F, 0.0F, -1.5F, 1.0F, 8.0F, 4.0F);
-        body.addOrReplaceChild("left_wing", wing, PartPose.offsetAndRotation(3.5F, -6.5F, 0.0F, 0.15F, 0.0F, 0.0F));
-        body.addOrReplaceChild("right_wing", wing, PartPose.offsetAndRotation(-3.5F, -6.5F, 0.0F, 0.15F, 0.0F, 0.0F));
-
-        // Tail: a short flat tail pointing backwards and down.
-        body.addOrReplaceChild("tail",
-                CubeListBuilder.create().texOffs(24, 12).addBox(-1.5F, -0.5F, 0.0F, 3.0F, 1.0F, 4.0F),
-                PartPose.offsetAndRotation(0.0F, -1.0F, 2.5F, -0.6F, 0.0F, 0.0F));
-
-        // Head: a big 5x5x5 box, plus a flat cap on top that sticks out 1 pixel at the front.
-        PartDefinition head = root.addOrReplaceChild("head",
-                CubeListBuilder.create().texOffs(32, 0).addBox(-2.5F, -5.0F, -3.5F, 5.0F, 5.0F, 5.0F),
-                PartPose.offset(0.0F, 15.5F, -1.5F));
-        head.addOrReplaceChild("cap",
-                CubeListBuilder.create().texOffs(0, 12).addBox(-3.0F, -6.0F, -4.5F, 6.0F, 1.0F, 6.0F),
-                PartPose.ZERO);
-        // The blue band above the beak (called the "cere").
-        head.addOrReplaceChild("cere",
-                CubeListBuilder.create().texOffs(38, 12).addBox(-1.5F, -5.0F, -4.5F, 3.0F, 1.0F, 1.0F),
-                PartPose.ZERO);
-        // The beak, hanging down below the cere.
-        head.addOrReplaceChild("beak",
-                CubeListBuilder.create().texOffs(38, 15).addBox(-1.0F, -4.0F, -4.5F, 2.0F, 2.0F, 1.0F),
-                PartPose.ZERO);
-
-        // Legs: little grey legs with the toes pointing forwards.
-        CubeListBuilder leg = CubeListBuilder.create().texOffs(46, 12).addBox(-0.5F, 0.0F, -1.0F, 1.0F, 2.0F, 2.0F);
-        root.addOrReplaceChild("left_leg", leg, PartPose.offset(1.2F, 22.0F, 0.5F));
-        root.addOrReplaceChild("right_leg", leg, PartPose.offset(-1.2F, 22.0F, 0.5F));
-
-        return LayerDefinition.create(mesh, 64, 32);
+    private static AnimationHolder animation(String name) {
+        return AnimationLoader.INSTANCE.getAnimationHolder(ParakeetsAndCapybaras.id(name));
     }
 
     /** Poses the model for one frame. */
@@ -103,97 +70,31 @@ public class ParakeetModel extends EntityModel<ParakeetRenderState> {
         this.rightLeg.visible = !sitting;
 
         // Look where the bird is looking.
-        this.head.xRot = state.xRot * Mth.DEG_TO_RAD;
-        this.head.yRot = state.yRot * Mth.DEG_TO_RAD;
+        this.head.xRot += state.xRot * Mth.DEG_TO_RAD;
+        this.head.yRot += state.yRot * Mth.DEG_TO_RAD;
+
+        // Gentle idle movement all the time.
+        this.animate(state.idleAnimationState, IDLE, state.ageInTicks);
 
         switch (pose) {
-            case SITTING -> {
-                // Sink down onto the ground or perch.
-                this.body.y += 2.0F;
-                this.head.y += 2.0F;
-            }
-            case PARTY -> {
-                // Dancing: bob the whole bird from side to side and tilt the head.
-                float sideways = Mth.cos(state.ageInTicks);
-                float upDown = Mth.sin(state.ageInTicks);
-                this.head.x += sideways;
-                this.head.y += upDown;
-                this.head.xRot = 0.0F;
-                this.head.yRot = 0.0F;
-                this.head.zRot = Mth.sin(state.ageInTicks) * 0.4F;
-                this.body.x += sideways;
-                this.body.y += upDown;
-                this.leftLeg.zRot = -Mth.PI / 9.0F;
-                this.rightLeg.zRot = Mth.PI / 9.0F;
-                this.flapWings(state.flapAngle);
-            }
+            case STANDING -> this.animateWalk(WALK, state.walkAnimationPos, state.walkAnimationSpeed, 2.0F, 2.5F);
             case FLYING -> {
-                // Tuck the legs back and flap.
-                this.leftLeg.xRot = 0.7F;
-                this.rightLeg.xRot = 0.7F;
-                this.bob(state.flapAngle * 0.3F);
-                this.flapWings(state.flapAngle);
+                // Tuck the legs back and flap the wings.
+                this.leftLeg.xRot += 0.7F;
+                this.rightLeg.xRot += 0.7F;
+                this.leftWing.zRot -= state.flapAngle;
+                this.rightWing.zRot += state.flapAngle;
             }
-            case STANDING -> {
-                // Walking: swing the legs and wiggle the tail.
-                float swing = state.walkAnimationPos * 0.6662F;
-                this.leftLeg.xRot = Mth.cos(swing) * 1.4F * state.walkAnimationSpeed;
-                this.rightLeg.xRot = Mth.cos(swing + Mth.PI) * 1.4F * state.walkAnimationSpeed;
-                this.tail.xRot += Mth.cos(swing) * 0.3F * state.walkAnimationSpeed;
-                this.bob(state.flapAngle * 0.3F);
-                this.flapWings(state.flapAngle);
-            }
-            case ON_SHOULDER -> {
-                // Riding on a player's shoulder: just sit still and look around.
+            case SITTING -> this.body.y += 2.5F; // sink down onto the perch / ground
+            default -> {
             }
         }
 
-        if (state.trick != null && pose != ParrotModel.Pose.ON_SHOULDER) {
-            this.playTrick(state.trick, state.trickTime);
-        }
-    }
-
-    /** The tricks a budgie does when right-clicked. t = ticks since the trick started. */
-    private void playTrick(Parakeet.Trick trick, float t) {
-        // Ease in over the first 4 ticks and out over the last 4, so the head doesn't snap.
-        float fade = Mth.clamp(Math.min(t, trick.durationTicks - t) / 4.0F, 0.0F, 1.0F);
-        switch (trick) {
-            case BITE -> {
-                // Two quick pecks forwards.
-                float peck = Math.max(0.0F, Mth.sin(t * Mth.PI / 5.0F)) * fade;
-                this.head.xRot += peck * 0.9F;
-                this.head.z -= peck * 1.0F;
-                this.head.y += peck * 0.5F;
-            }
-            case DANCE -> {
-                // Bob from side to side, tilt the head and flutter the wings.
-                float sideways = Mth.cos(t * 0.6F) * fade;
-                this.head.x += sideways;
-                this.body.x += sideways;
-                this.head.y += Mth.sin(t * 1.2F) * 0.5F * fade;
-                this.head.zRot = Mth.sin(t * 0.6F) * 0.4F * fade;
-                this.flapWings((Mth.sin(t * 1.2F) + 1.0F) * 0.25F * fade);
-            }
-            case PREEN -> {
-                // Turn the head round to the wing and nibble the feathers.
-                this.head.yRot = 1.2F * fade;
-                this.head.xRot = (0.5F + Mth.sin(t * 1.5F) * 0.12F) * fade;
-                this.leftWing.zRot = -0.25F * fade;
-            }
-        }
-    }
-
-    /** Moves the whole bird up and down a little while it flaps. */
-    private void bob(float amount) {
-        this.body.y += amount;
-        this.head.y += amount;
-        this.leftLeg.y += amount;
-        this.rightLeg.y += amount;
-    }
-
-    /** Opens the wings outwards. flapAngle is 0 when resting. */
-    private void flapWings(float flapAngle) {
-        this.leftWing.zRot = -flapAngle;
-        this.rightWing.zRot = flapAngle;
+        // Tricks (right-click), dancing to a jukebox, getting hurt and dying.
+        this.animate(state.biteAnimationState, BITE, state.ageInTicks);
+        this.animate(state.danceAnimationState, DANCE, state.ageInTicks);
+        this.animate(state.preenAnimationState, PREEN, state.ageInTicks);
+        this.animate(state.hurtAnimationState, HURT[state.hurtVariant], state.ageInTicks);
+        this.animate(state.deathAnimationState, DEATH, state.ageInTicks);
     }
 }

@@ -17,12 +17,16 @@ Vanilla parrots are not changed. Parakeets are a separate mob that lives alongsi
 ### Parakeet
 - **Where:** forests (forest, flower forest, birch forest, old growth birch forest, dark forest).
   They spawn exactly as often as parrots do in jungles (weight 40, groups of 1-2).
-- **Colours:** olive, sky blue, white, yellow and blue spangle.
+- **Colours:** 10 budgie colours: green, light green, olive, green spangle, sky blue, cobalt,
+  blue spangle, gray, yellow and white.
 - **Wild behaviour:** wild budgies fly around and look around, and fly away from players, unless
   you are holding seeds (then they come closer). They are quiet, apart from high-pitched squeaks
   when hurt. They have 12 health, take 40% more damage from fire and lava, and can't be leashed.
 - **Tricks:** right-click a budgie with an empty hand and it does a random trick: a **bite**, a
   little **dance** or **preening** its wing (at most once every 3 seconds).
+- **Model and animations:** the budgie model, textures and animations (idle, walk, bite, dance,
+  preen, hurt and death) are converted from the *Nog's Menagerie* budgie Blockbench models with
+  `tools/convert_budgie_models.py`.
 - **Tame:** right-click with **seeds** (wheat, melon, pumpkin, beetroot, torchflower seeds or a
   pitcher pod). Each seed has a 1 in 10 chance, like a parrot. Hearts = tamed!
 - **Modes:** right-click a tamed parakeet to switch between **Follow → Sit → Stand**. A message
@@ -106,7 +110,8 @@ src/main/java/com/parakeetsandcapybaras/
 │   └── CommonModEvents.java       attributes, spawn placement, creative tabs
 └── client/                        drawing things (only runs on the player's computer)
     ├── ClientModEvents.java       registers renderers and models
-    ├── model/ParakeetModel.java   the chunky budgie 3D model and its poses (walk, fly, sit, dance)
+    ├── model/ParakeetModel.java   plays the budgie animations (idle, walk, tricks, hurt, death, fly, sit)
+    ├── model/ParakeetGeometry.java  the budgie's 3D shape (generated from the .bbmodel files)
     ├── model/CapybaraModel.java   the capybara's 3D model and animations (incl. sitting pose)
     └── renderer/                  renderers for the mobs, the shoulder parakeet and the cage bird
 
@@ -125,7 +130,9 @@ src/main/resources/
     ├── parakeetsandcapybaras/recipe/                    crafting recipes
     └── parakeetsandcapybaras/loot_table/                drops (cages keep their bird)
 
-tools/generate_textures.py         the script that painted the textures (optional)
+tools/generate_textures.py         paints the capybara and bird cage textures (optional)
+tools/convert_budgie_models.py     converts the budgie .bbmodel files into the model, textures
+                                   and animations (python tools/convert_budgie_models.py <folder>)
 ```
 
 ## Easy things to change
@@ -155,6 +162,9 @@ Parakeets are drawn a little smaller than a parrot. Change `SIZE = 0.7F` in
 Edit the PNGs in `assets/parakeetsandcapybaras/textures/`, or change the colours at the top of
 `tools/generate_textures.py` and run `python tools/generate_textures.py`.
 
-## Licence
-MIT. The code that is based on Minecraft's Parrot class follows Mojang's code, as most mods do.
-All textures were made from scratch for this mod.
+## Credits and licence
+- The budgie model, textures and animations are from **Nog's Menagerie** (Nog's Budgies). They are
+  not covered by this project's licence; check that pack's own licence before sharing them.
+- The capybara and bird cage textures were made from scratch for this mod.
+- The code is MIT licensed. The parts based on Minecraft's Parrot class follow Mojang's code, as
+  most mods do.

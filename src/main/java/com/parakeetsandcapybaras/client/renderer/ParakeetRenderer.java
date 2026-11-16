@@ -19,10 +19,10 @@ import net.minecraft.util.Mth;
  */
 public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState, ParakeetModel> {
     /**
-     * How big parakeets are drawn. At 0.7 they end up a little smaller than a vanilla parrot.
-     * Change this number to make them bigger or smaller.
+     * How big parakeets are drawn. At 1.0 the budgie model is a little smaller than a vanilla
+     * parrot. Change this number to make them bigger or smaller.
      */
-    public static final float SIZE = 0.7F;
+    public static final float SIZE = 1.0F;
     private static final Map<Parakeet.Variant, ResourceLocation> TEXTURES = new EnumMap<>(Parakeet.Variant.class);
 
     static {
@@ -48,8 +48,13 @@ public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState,
     public void extractRenderState(Parakeet parakeet, ParakeetRenderState state, float partialTick) {
         super.extractRenderState(parakeet, state, partialTick);
         state.parakeetVariant = parakeet.getVariant();
-        state.trick = parakeet.currentTrick;
-        state.trickTime = parakeet.tickCount - parakeet.trickStartTick + partialTick;
+        state.idleAnimationState.copyFrom(parakeet.idleAnimationState);
+        state.biteAnimationState.copyFrom(parakeet.biteAnimationState);
+        state.danceAnimationState.copyFrom(parakeet.danceAnimationState);
+        state.preenAnimationState.copyFrom(parakeet.preenAnimationState);
+        state.hurtAnimationState.copyFrom(parakeet.hurtAnimationState);
+        state.deathAnimationState.copyFrom(parakeet.deathAnimationState);
+        state.hurtVariant = parakeet.hurtVariant;
 
         // Wing flapping (same maths as the parrot renderer).
         float flap = Mth.lerp(partialTick, parakeet.oFlap, parakeet.flap);
@@ -71,6 +76,12 @@ public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState,
     @Override
     public ResourceLocation getTextureLocation(ParakeetRenderState state) {
         return getTexture(state.parakeetVariant);
+    }
+
+    /** Don't tip over sideways when dying: the budgie has its own death animation. */
+    @Override
+    protected float getFlipDegrees() {
+        return 0.0F;
     }
 
     /** Draw parakeets a bit smaller than parrots, and babies (chicks) at half of that. */

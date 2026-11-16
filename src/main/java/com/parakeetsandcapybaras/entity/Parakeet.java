@@ -31,6 +31,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -79,7 +80,7 @@ import net.minecraft.world.phys.Vec3;
  *   <li>Wild budgies fly around, look around and fly away from players (unless you hold seeds).</li>
  *   <li>Silent, except for high-pitched parrot hurt/death sounds.</li>
  *   <li>Right-click with an empty hand: it does a random trick (bite, dance or preen).</li>
- *   <li>5 colours: olive, sky blue, white, yellow and blue spangle (see {@link Variant}).</li>
+ *   <li>10 colours, one for each nm_budgie model (see {@link Variant}).</li>
  * </ul>
  *
  * <p>Pet features:</p>
@@ -116,10 +117,21 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     private static final int TRICK_COOLDOWN = 60;
     private static final byte FIRST_TRICK_EVENT = 100;
     private long lastTrickTime = -TRICK_COOLDOWN;
-    /** Client only: which trick is playing right now, and when it started. Read by the renderer. */
-    @Nullable
-    public Trick currentTrick;
-    public int trickStartTick;
+
+    // Animations (client only). The renderer copies these and the model plays the matching
+    // animation from assets/parakeetsandcapybaras/neoforge/animations/entity/.
+    public final AnimationState idleAnimationState = new AnimationState();
+    public final AnimationState biteAnimationState = new AnimationState();
+    public final AnimationState danceAnimationState = new AnimationState();
+    public final AnimationState preenAnimationState = new AnimationState();
+    public final AnimationState hurtAnimationState = new AnimationState();
+    public final AnimationState deathAnimationState = new AnimationState();
+    /** Which of the 3 hurt animations is playing (0, 1 or 2). */
+    public int hurtVariant;
+    /** How long the dance animation is, in milliseconds (it repeats while a jukebox plays). */
+    private static final long DANCE_LENGTH_MS = 1400;
+    /** The death animation lasts 1.5 seconds, so the body stays a little longer than usual. */
+    private static final int DEATH_TICKS = 30;
 
     public Parakeet(EntityType<? extends Parakeet> type, Level level) {
         super(type, level);
@@ -241,13 +253,11 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
             this.jukebox = null;
         }
 
-        // Forget a trick once it has finished playing.
-        if (this.currentTrick != null && this.tickCount - this.trickStartTick > this.currentTrick.durationTicks) {
-            this.currentTrick = null;
-        }
-
         super.aiStep();
         this.calculateFlapping();
+        if (this.level().isClientSide) {
+            this.updateAnimations();
+        }
     }
 
     /** Called by Minecraft when a nearby jukebox starts or stops playing. */
@@ -407,15 +417,50 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
         this.level().broadcastEntityEvent(this, (byte) (FIRST_TRICK_EVENT + trick.ordinal()));
     }
 
-    /** Client side: receives the trick sent by {@link #tryRandomTrick()}. */
+    /** Client side: receives the trick sent by {@link #tryRandomTrick()} and starts its animation. */
     @Override
     public void handleEntityEvent(byte id) {
         int index = id - FIRST_TRICK_EVENT;
         if (index >= 0 && index < Trick.values().length) {
-            this.currentTrick = Trick.values()[index];
-            this.trickStartTick = this.tickCount;
+            switch (Trick.values()[index]) {
+                case BITE -> this.biteAnimationState.start(this.tickCount);
+                case DANCE -> this.danceAnimationState.start(this.tickCount);
+                case PREEN -> this.preenAnimationState.start(this.tickCount);
+            }
         } else {
             super.handleEntityEvent(id);
+        }
+    }
+
+    /** Client side: plays one of the 3 hurt animations when the bird gets hit. */
+    @Override
+    public void handleDamageEvent(DamageSource source) {
+        super.handleDamageEvent(source);
+        this.hurtVariant = this.random.nextInt(3);
+        this.hurtAnimationState.start(this.tickCount);
+    }
+
+    /** Client side, every tick: keeps the idle, dance and death animations going. */
+    private void updateAnimations() {
+        this.idleAnimationState.startIfStopped(this.tickCount);
+        // Near a playing jukebox: keep repeating the dance.
+        if (this.partyParakeet) {
+            if (!this.danceAnimationState.isStarted() || this.danceAnimationState.getTimeInMillis(this.tickCount) > DANCE_LENGTH_MS) {
+                this.danceAnimationState.start(this.tickCount);
+            }
+        }
+        if (this.isDeadOrDying()) {
+            this.deathAnimationState.startIfStopped(this.tickCount);
+        }
+    }
+
+    /** Like a normal death, but waits 1.5 seconds so the death animation can finish. */
+    @Override
+    protected void tickDeath() {
+        this.deathTime++;
+        if (this.deathTime >= DEATH_TICKS && !this.level().isClientSide() && !this.isRemoved()) {
+            this.level().broadcastEntityEvent(this, (byte) 60); // the "poof" smoke
+            this.remove(RemovalReason.KILLED);
         }
     }
 
@@ -592,15 +637,20 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     /**
-     * The 5 parakeet colours, the same set as the nm_budgie configs. All are real budgerigar
-     * colours.
+     * The 10 parakeet colours, one for each nm_budgie model. The texture for each one is
+     * textures/entity/parakeet/parakeet_NAME.png.
      */
     public enum Variant implements StringRepresentable {
-        OLIVE(0, "olive"),               // dark olive-green body with a yellow face
-        SKY_BLUE(1, "sky_blue"),         // blue body with a white face
-        YELLOW(2, "yellow"),             // "lutino": all yellow with red eyes
-        WHITE(3, "white"),               // "albino": all white with red eyes
-        BLUE_SPANGLE(4, "blue_spangle"); // blue body, white wings with dark spots
+        OLIVE(0, "olive"),
+        SKY_BLUE(1, "sky_blue"),
+        YELLOW(2, "yellow"),
+        WHITE(3, "white"),
+        BLUE_SPANGLE(4, "blue_spangle"),
+        COBALT(5, "cobalt"),
+        GRAY(6, "gray"),
+        GREEN(7, "green"),
+        GREEN_SPANGLE(8, "green_spangle"),
+        LIGHT_GREEN(9, "light_green");
 
         private static final IntFunction<Variant> BY_ID = ByIdMap.continuous(Variant::getId, values(), ByIdMap.OutOfBoundsStrategy.CLAMP);
         private final int id;
@@ -627,16 +677,9 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
 
     /** Tricks a budgie does when you right-click it (the bite / dance / preen animations). */
     public enum Trick {
-        BITE(20),   // two quick pecks
-        DANCE(40),  // bobs from side to side
-        PREEN(40);  // cleans the feathers on its wing
-
-        /** How long the trick lasts, in ticks (20 ticks = 1 second). */
-        public final int durationTicks;
-
-        Trick(int durationTicks) {
-            this.durationTicks = durationTicks;
-        }
+        BITE,
+        DANCE,
+        PREEN
     }
 
     /** What a tamed parakeet does. Right-click it to switch to the next mode. */
