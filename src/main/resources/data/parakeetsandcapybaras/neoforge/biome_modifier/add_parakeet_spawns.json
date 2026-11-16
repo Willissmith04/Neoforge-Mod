@@ -3,7 +3,7 @@
   "biomes": "#parakeetsandcapybaras:parakeet_spawns",
   "spawners": {
     "type": "parakeetsandcapybaras:parakeet",
-    "weight": 40,
+    "weight": 50,
     "minCount": 1,
     "maxCount": 2
   }
