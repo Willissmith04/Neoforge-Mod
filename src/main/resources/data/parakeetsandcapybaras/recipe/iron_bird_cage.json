@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "N": "minecraft:iron_nugget",
+    "I": "minecraft:iron_ingot",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    " N ",
+    "ISI",
+    "III"
+  ],
+  "result": {
+    "count": 1,
+    "id": "parakeetsandcapybaras:iron_bird_cage"
+  }
+}

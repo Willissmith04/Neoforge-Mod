@@ -1,0 +1,10 @@
+{
+  "type": "neoforge:add_spawns",
+  "biomes": "#parakeetsandcapybaras:capybara_spawns",
+  "spawners": {
+    "type": "parakeetsandcapybaras:capybara",
+    "weight": 1,
+    "minCount": 1,
+    "maxCount": 4
+  }
+}

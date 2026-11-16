@@ -1,0 +1,21 @@
+{
+  "entity.parakeetsandcapybaras.parakeet": "Parakeet",
+  "entity.parakeetsandcapybaras.capybara": "Capybara",
+  "item.parakeetsandcapybaras.parakeet_spawn_egg": "Parakeet Spawn Egg",
+  "item.parakeetsandcapybaras.capybara_spawn_egg": "Capybara Spawn Egg",
+  "block.parakeetsandcapybaras.gold_bird_cage": "Gold Bird Cage",
+  "block.parakeetsandcapybaras.iron_bird_cage": "Iron Bird Cage",
+  "item.parakeetsandcapybaras.bird_cage.empty": "Empty - right-click a parrot or parakeet to catch it",
+  "item.parakeetsandcapybaras.bird_cage.contains": "Contains: %s",
+  "item.parakeetsandcapybaras.bird_cage.named": "%s (%s)",
+  "message.parakeetsandcapybaras.bird_cage.full": "This cage already has a bird in it",
+  "message.parakeetsandcapybaras.bird_cage.not_yours": "That bird belongs to someone else",
+  "message.parakeetsandcapybaras.parakeet.mode.follow": "%s is following you",
+  "message.parakeetsandcapybaras.parakeet.mode.sit": "%s is sitting",
+  "message.parakeetsandcapybaras.parakeet.mode.stand": "%s is standing still",
+  "message.parakeetsandcapybaras.parakeet.too_young": "This parakeet is too young to ride on your shoulder",
+  "message.parakeetsandcapybaras.parakeet.no_room": "No room on your shoulders (stand on the ground with a free shoulder)",
+  "message.parakeetsandcapybaras.capybara.mode.follow": "%s is following you",
+  "message.parakeetsandcapybaras.capybara.mode.sit": "%s is lying down",
+  "message.parakeetsandcapybaras.capybara.mode.wander": "%s is wandering around"
+}

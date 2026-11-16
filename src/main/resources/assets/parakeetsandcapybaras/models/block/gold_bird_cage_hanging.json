@@ -1,0 +1,6 @@
+{
+  "parent": "parakeetsandcapybaras:block/template_bird_cage_hanging",
+  "textures": {
+    "cage": "parakeetsandcapybaras:block/gold_bird_cage"
+  }
+}
