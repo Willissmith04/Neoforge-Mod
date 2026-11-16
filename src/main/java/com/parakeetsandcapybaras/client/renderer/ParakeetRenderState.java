@@ -8,5 +8,9 @@ import net.minecraft.client.renderer.entity.state.ParrotRenderState;
  * (pose, wing flapping...) and adds the parakeet colour.
  */
 public class ParakeetRenderState extends ParrotRenderState {
-    public Parakeet.Variant parakeetVariant = Parakeet.Variant.GREEN;
+    public Parakeet.Variant parakeetVariant = Parakeet.Variant.OLIVE;
+    /** The trick being played (bite / dance / preen), or null. */
+    public Parakeet.Trick trick;
+    /** How many ticks the trick has been playing (with fractions for smooth animation). */
+    public float trickTime;
 }

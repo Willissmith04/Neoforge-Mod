@@ -1,6 +1,7 @@
 package com.parakeetsandcapybaras.client.model;
 
 import com.parakeetsandcapybaras.client.renderer.ParakeetRenderState;
+import com.parakeetsandcapybaras.entity.Parakeet;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.ParrotModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -21,7 +22,7 @@ import net.minecraft.util.Mth;
  *   <li>a short tail and two little legs.</li>
  * </ul>
  * It uses the same poses as the vanilla parrot (standing, flying, sitting, dancing and riding on
- * a shoulder), so all of the parakeet's behaviour from Parakeet.java still shows up here.
+ * a shoulder), plus the bite / dance / preen tricks a budgie does when you right-click it.
  *
  * <p>Model coordinates are in pixels (16 pixels = 1 block). Y goes DOWN and y = 24 is the
  * ground. The texture is 64x32; see tools/generate_textures.py for where each box is painted.</p>
@@ -144,6 +145,40 @@ public class ParakeetModel extends EntityModel<ParakeetRenderState> {
             }
             case ON_SHOULDER -> {
                 // Riding on a player's shoulder: just sit still and look around.
+            }
+        }
+
+        if (state.trick != null && pose != ParrotModel.Pose.ON_SHOULDER) {
+            this.playTrick(state.trick, state.trickTime);
+        }
+    }
+
+    /** The tricks a budgie does when right-clicked. t = ticks since the trick started. */
+    private void playTrick(Parakeet.Trick trick, float t) {
+        // Ease in over the first 4 ticks and out over the last 4, so the head doesn't snap.
+        float fade = Mth.clamp(Math.min(t, trick.durationTicks - t) / 4.0F, 0.0F, 1.0F);
+        switch (trick) {
+            case BITE -> {
+                // Two quick pecks forwards.
+                float peck = Math.max(0.0F, Mth.sin(t * Mth.PI / 5.0F)) * fade;
+                this.head.xRot += peck * 0.9F;
+                this.head.z -= peck * 1.0F;
+                this.head.y += peck * 0.5F;
+            }
+            case DANCE -> {
+                // Bob from side to side, tilt the head and flutter the wings.
+                float sideways = Mth.cos(t * 0.6F) * fade;
+                this.head.x += sideways;
+                this.body.x += sideways;
+                this.head.y += Mth.sin(t * 1.2F) * 0.5F * fade;
+                this.head.zRot = Mth.sin(t * 0.6F) * 0.4F * fade;
+                this.flapWings((Mth.sin(t * 1.2F) + 1.0F) * 0.25F * fade);
+            }
+            case PREEN -> {
+                // Turn the head round to the wing and nibble the feathers.
+                this.head.yRot = 1.2F * fade;
+                this.head.xRot = (0.5F + Mth.sin(t * 1.5F) * 0.12F) * fade;
+                this.leftWing.zRot = -0.25F * fade;
             }
         }
     }

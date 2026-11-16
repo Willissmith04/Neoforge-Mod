@@ -18,6 +18,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.util.Mth;
@@ -38,13 +39,16 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
+import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.BreedGoal;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.FollowMobGoal;
 import net.minecraft.world.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.world.entity.ai.goal.FollowParentGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.SitWhenOrderedToGoal;
+import net.minecraft.world.entity.ai.goal.TemptGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomFlyingGoal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -66,13 +70,21 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * The parakeet (budgerigar). This class is based on Minecraft's own {@link Parrot} class, so it
- * flies, wanders between trees, imitates nearby monsters, dances to music and can ride on your
- * shoulder. It is a separate mob, so normal parrots are not changed.
+ * flies, wanders between trees, dances to music and can ride on your shoulder. It is a separate
+ * mob, so normal parrots are not changed.
  *
- * <p>What is different from a parrot:</p>
+ * <p>Its stats and wild behaviour follow the "nm_budgie" MythicMobs configs:</p>
  * <ul>
- *   <li>It comes in 6 real-life budgie colours (see {@link Variant}).</li>
- *   <li>It can be bred with seeds and has babies.</li>
+ *   <li>12 health, no attack, takes 40% more damage from fire and lava, can't be leashed.</li>
+ *   <li>Wild budgies fly around, look around and fly away from players (unless you hold seeds).</li>
+ *   <li>Silent, except for high-pitched parrot hurt/death sounds.</li>
+ *   <li>Right-click with an empty hand: it does a random trick (bite, dance or preen).</li>
+ *   <li>5 colours: olive, sky blue, white, yellow and blue spangle (see {@link Variant}).</li>
+ * </ul>
+ *
+ * <p>Pet features:</p>
+ * <ul>
+ *   <li>Tame with seeds and breed with seeds; chicks inherit a parent's colour.</li>
  *   <li>Right-click a tamed parakeet to cycle Follow -> Sit -> Stand.</li>
  *   <li>Shift + right-click (empty hand) to put it on your shoulder. Jump to let it hop off.</li>
  * </ul>
@@ -97,6 +109,18 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
 
     private Mode mode = Mode.FOLLOW;
 
+    // Tricks (bite / dance / preen) shown when a player right-clicks the bird.
+    /** Damage from fire and lava is multiplied by this (from the "DamageModifiers" in the config). */
+    private static final float FIRE_DAMAGE_MULTIPLIER = 1.4F;
+    /** How long to wait between tricks: 3 seconds (60 ticks), like "cd=3" in the config. */
+    private static final int TRICK_COOLDOWN = 60;
+    private static final byte FIRST_TRICK_EVENT = 100;
+    private long lastTrickTime = -TRICK_COOLDOWN;
+    /** Client only: which trick is playing right now, and when it started. Read by the renderer. */
+    @Nullable
+    public Trick currentTrick;
+    public int trickStartTick;
+
     public Parakeet(EntityType<? extends Parakeet> type, Level level) {
         super(type, level);
         this.moveControl = new FlyingMoveControl(this, 10, false);
@@ -109,13 +133,13 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     // Attributes, AI and movement
     // ------------------------------------------------------------------
 
-    /** Health, speed etc. Same numbers as the parrot. Registered in CommonModEvents. */
+    /** Health 12, speed 0.2 and no attack damage, as in the budgie configs. Registered in CommonModEvents. */
     public static AttributeSupplier.Builder createAttributes() {
         return Animal.createAnimalAttributes()
-                .add(Attributes.MAX_HEALTH, 6.0)
+                .add(Attributes.MAX_HEALTH, 12.0)
                 .add(Attributes.FLYING_SPEED, 0.4F)
                 .add(Attributes.MOVEMENT_SPEED, 0.2F)
-                .add(Attributes.ATTACK_DAMAGE, 3.0);
+                .add(Attributes.ATTACK_DAMAGE, 0.0);
     }
 
     /**
@@ -127,7 +151,25 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
         this.goalSelector.addGoal(0, new TamableAnimalPanicGoal(1.25));
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new BreedGoal(this, 1.0));
-        this.goalSelector.addGoal(1, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        // Wild budgies come closer when you hold seeds...
+        this.goalSelector.addGoal(1, new TemptGoal(this, 1.0, this::isFood, false) {
+            @Override
+            public boolean canUse() {
+                return !Parakeet.this.isTame() && super.canUse();
+            }
+        });
+        // ...but otherwise they fly away from players ("fleeplayers").
+        this.goalSelector.addGoal(2, new AvoidEntityGoal<>(this, Player.class, 6.0F, 1.0, 1.3,
+                player -> !this.isTame() && !player.isSpectator() && !(player instanceof Player p && p.isCreative())
+                        && !this.isFood(player.getMainHandItem()) && !this.isFood(player.getOffhandItem())));
+        // Tamed budgies keep an eye on you; wild ones just look around ("randomlookaround").
+        this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 8.0F) {
+            @Override
+            public boolean canUse() {
+                return Parakeet.this.isTame() && super.canUse();
+            }
+        });
+        this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
         this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
         this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0, 5.0F, 1.0F) {
             @Override
@@ -150,7 +192,7 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
         this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0, 3.0F, 7.0F) {
             @Override
             public boolean canUse() {
-                return Parakeet.this.isAllowedToRoam() && super.canUse();
+                return Parakeet.this.isTame() && Parakeet.this.isAllowedToRoam() && super.canUse();
             }
 
             @Override
@@ -199,9 +241,9 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
             this.jukebox = null;
         }
 
-        // Real budgies are great mimics too! Re-use the parrot's imitation code.
-        if (this.level().random.nextInt(400) == 0) {
-            Parrot.imitateNearbyMobs(this.level(), this);
+        // Forget a trick once it has finished playing.
+        if (this.currentTrick != null && this.tickCount - this.trickStartTick > this.currentTrick.durationTicks) {
+            this.currentTrick = null;
         }
 
         super.aiStep();
@@ -245,6 +287,15 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+
+        // 0) Empty hand (not sneaking) = the bird does a random trick: bite, dance or preen.
+        boolean emptyHandClick = stack.isEmpty() && !player.isShiftKeyDown();
+        if (emptyHandClick && !this.level().isClientSide) {
+            this.tryRandomTrick();
+        }
+        if (emptyHandClick && !(this.isTame() && this.isOwnedBy(player))) {
+            return InteractionResult.SUCCESS; // wild bird or someone else's: just the trick
+        }
 
         // 1) Not tamed yet + seeds = try to tame (1 in 10 chance, just like a parrot).
         if (!this.isTame() && this.isFood(stack)) {
@@ -334,11 +385,44 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
         if (this.isInvulnerableTo(level, source)) {
             return false;
         }
+        // Fire and lava hurt budgies 40% more.
+        if (source.is(DamageTypeTags.IS_FIRE)) {
+            amount *= FIRE_DAMAGE_MULTIPLIER;
+        }
         // Like a parrot: getting hurt makes it stand up.
         if (this.mode == Mode.SIT) {
             this.setMode(Mode.FOLLOW);
         }
         return super.hurtServer(level, source, amount);
+    }
+
+    /** Server side: pick a random trick (at most once every 3 seconds) and tell all players to show it. */
+    private void tryRandomTrick() {
+        long now = this.level().getGameTime();
+        if (now - this.lastTrickTime < TRICK_COOLDOWN) {
+            return;
+        }
+        this.lastTrickTime = now;
+        Trick trick = Util.getRandom(Trick.values(), this.random);
+        this.level().broadcastEntityEvent(this, (byte) (FIRST_TRICK_EVENT + trick.ordinal()));
+    }
+
+    /** Client side: receives the trick sent by {@link #tryRandomTrick()}. */
+    @Override
+    public void handleEntityEvent(byte id) {
+        int index = id - FIRST_TRICK_EVENT;
+        if (index >= 0 && index < Trick.values().length) {
+            this.currentTrick = Trick.values()[index];
+            this.trickStartTick = this.tickCount;
+        } else {
+            super.handleEntityEvent(id);
+        }
+    }
+
+    /** Budgies can't be put on a lead ("PreventLeashing"). */
+    @Override
+    public boolean canBeLeashed() {
+        return false;
     }
 
     // ------------------------------------------------------------------
@@ -400,13 +484,13 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     // ------------------------------------------------------------------
-    // Sounds (parrot sounds, slightly higher pitched because parakeets are smaller)
+    // Sounds: budgies are silent, except for high-pitched parrot hurt and death sounds
     // ------------------------------------------------------------------
 
     @Nullable
     @Override
     public SoundEvent getAmbientSound() {
-        return Parrot.getAmbient(this.level(), this.level().random);
+        return null; // no chirping or imitating
     }
 
     @Override
@@ -421,7 +505,7 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        this.playSound(SoundEvents.PARROT_STEP, 0.15F, 1.0F);
+        // silent
     }
 
     @Override
@@ -431,13 +515,14 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
 
     @Override
     protected void onFlap() {
-        this.playSound(SoundEvents.PARROT_FLY, 0.15F, 1.0F);
+        // silent wings, but keep the flap timer going
         this.nextFlap = this.flyDist + this.flapSpeed / 2.0F;
     }
 
+    /** Pitch 1.9: a lot higher than a parrot (which uses about 1.0). */
     @Override
     public float getVoicePitch() {
-        return (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.3F;
+        return 1.9F;
     }
 
     @Override
@@ -507,16 +592,15 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     /**
-     * The 6 parakeet colours. These are real budgerigar colours: green is the wild colour found
-     * in Australia, the others are common pet colours.
+     * The 5 parakeet colours, the same set as the nm_budgie configs. All are real budgerigar
+     * colours.
      */
     public enum Variant implements StringRepresentable {
-        GREEN(0, "green"),       // wild-type light green with a yellow face
-        SKY_BLUE(1, "sky_blue"), // blue body with a white face
-        YELLOW(2, "yellow"),     // "lutino": all yellow with red eyes
-        WHITE(3, "white"),       // "albino": all white with red eyes
-        VIOLET(4, "violet"),     // violet body with a white face
-        GREY(5, "grey");         // grey body with a white face
+        OLIVE(0, "olive"),               // dark olive-green body with a yellow face
+        SKY_BLUE(1, "sky_blue"),         // blue body with a white face
+        YELLOW(2, "yellow"),             // "lutino": all yellow with red eyes
+        WHITE(3, "white"),               // "albino": all white with red eyes
+        BLUE_SPANGLE(4, "blue_spangle"); // blue body, white wings with dark spots
 
         private static final IntFunction<Variant> BY_ID = ByIdMap.continuous(Variant::getId, values(), ByIdMap.OutOfBoundsStrategy.CLAMP);
         private final int id;
@@ -538,6 +622,20 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
         @Override
         public String getSerializedName() {
             return this.name;
+        }
+    }
+
+    /** Tricks a budgie does when you right-click it (the bite / dance / preen animations). */
+    public enum Trick {
+        BITE(20),   // two quick pecks
+        DANCE(40),  // bobs from side to side
+        PREEN(40);  // cleans the feathers on its wing
+
+        /** How long the trick lasts, in ticks (20 ticks = 1 second). */
+        public final int durationTicks;
+
+        Trick(int durationTicks) {
+            this.durationTicks = durationTicks;
         }
     }
 

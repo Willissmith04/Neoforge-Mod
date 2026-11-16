@@ -72,14 +72,16 @@ def fill(img, rect, color_fn):
 #   tail (24,12) 3x1x4   cere (38,12) 3x1x1    beak (38,15) 2x2x1   legs (46,12) 1x2x2
 # ---------------------------------------------------------------------------------------------
 PARAKEET_COLOURS = {
-    #            body      face      face_dk   wing_lt   wing_dk   cheek     eye       cere
-    "green":    (0x3DAA45, 0xE2D85A, 0x8C8232, 0xD8D060, 0x7A742C, 0x3A3A8A, 0x1A1A1A, 0x3C46C8),
-    "sky_blue": (0x4A7EDC, 0xF0F0F0, 0x5A5A5A, 0xC8C8C8, 0x6A6A6A, 0x2A2A80, 0x1A1A1A, 0x3C46C8),
-    "yellow":   (0xF0DC3C, 0xFFF4A0, 0xD8C860, 0xFFF0A0, 0xD6C250, 0xF4F0E0, 0xB0303A, 0xE0A8A0),
-    "white":    (0xF2F2EE, 0xFFFFFF, 0xD0D0CC, 0xFAFAF6, 0xCFCFCA, 0xE6E6E6, 0xB0303A, 0xE0B4AC),
-    "violet":   (0x7C58C8, 0xF0F0F0, 0x5A5A5A, 0xC8C8C8, 0x6A6A6A, 0x40308A, 0x1A1A1A, 0x3C46C8),
-    "grey":     (0x8E949C, 0xF0F0F0, 0x5A5A5A, 0xC0C0C0, 0x5E5E5E, 0x50546A, 0x1A1A1A, 0x6A5A88),
+    # The 5 budgie colours from the nm_budgie configs.
+    #                body      face      face_dk   wing_lt   wing_dk   cheek     eye       cere
+    "olive":        (0x5E7428, 0xE2D85A, 0x5C5622, 0xD8D060, 0x4E4A1E, 0x3A3A8A, 0x1A1A1A, 0x3C46C8),
+    "sky_blue":     (0x4A7EDC, 0xF0F0F0, 0x5A5A5A, 0xC8C8C8, 0x6A6A6A, 0x2A2A80, 0x1A1A1A, 0x3C46C8),
+    "white":        (0xF2F2EE, 0xFFFFFF, 0xD0D0CC, 0xFAFAF6, 0xCFCFCA, 0xE6E6E6, 0xB0303A, 0xE0B4AC),
+    "yellow":       (0xF0DC3C, 0xFFF4A0, 0xD8C860, 0xFFF0A0, 0xD6C250, 0xF4F0E0, 0xB0303A, 0xE0A8A0),
+    "blue_spangle": (0x5A90E0, 0xF6F6F6, 0x3A3A3A, 0xF4F4F4, 0x2E2E2E, 0x8A8AC8, 0x1A1A1A, 0x3C46C8),
 }
+# "Spangle" budgies have light wing feathers with small dark marks, instead of the normal pattern.
+SPANGLE = {"blue_spangle"}
 BEAK = rgb(0xE6B634)
 BEAK_DARK = rgb(0xC08E1E)
 LEGS = rgb(0xB4ACBC)
@@ -149,6 +151,9 @@ def make_parakeet(name, colours):
 
     def wing_px(x, y, w, h):
         light, dark = (wing_lt, wing_dk) if y < h - 2 else (shade(wing_lt, -40), shade(wing_dk, -25))
+        if name in SPANGLE:
+            # mostly light feathers with a dark mark on every other feather
+            return dark if (y % 2 == 0 and x % 2 == (y // 2) % 2) else light
         return light if (x + y) % 2 == 0 else dark
 
     fill(img, wing["right"], wing_px)

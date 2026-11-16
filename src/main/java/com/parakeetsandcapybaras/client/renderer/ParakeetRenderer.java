@@ -48,6 +48,8 @@ public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState,
     public void extractRenderState(Parakeet parakeet, ParakeetRenderState state, float partialTick) {
         super.extractRenderState(parakeet, state, partialTick);
         state.parakeetVariant = parakeet.getVariant();
+        state.trick = parakeet.currentTrick;
+        state.trickTime = parakeet.tickCount - parakeet.trickStartTick + partialTick;
 
         // Wing flapping (same maths as the parrot renderer).
         float flap = Mth.lerp(partialTick, parakeet.oFlap, parakeet.flap);

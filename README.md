@@ -17,7 +17,12 @@ Vanilla parrots are not changed. Parakeets are a separate mob that lives alongsi
 ### Parakeet
 - **Where:** forests (forest, flower forest, birch forest, old growth birch forest, dark forest).
   They spawn exactly as often as parrots do in jungles (weight 40, groups of 1-2).
-- **Colours:** green (the wild colour), sky blue, yellow (lutino), white (albino), violet and grey.
+- **Colours:** olive, sky blue, white, yellow and blue spangle.
+- **Wild behaviour:** wild budgies fly around and look around, and fly away from players, unless
+  you are holding seeds (then they come closer). They are quiet, apart from high-pitched squeaks
+  when hurt. They have 12 health, take 40% more damage from fire and lava, and can't be leashed.
+- **Tricks:** right-click a budgie with an empty hand and it does a random trick: a **bite**, a
+  little **dance** or **preening** its wing (at most once every 3 seconds).
 - **Tame:** right-click with **seeds** (wheat, melon, pumpkin, beetroot, torchflower seeds or a
   pitcher pod). Each seed has a 1 in 10 chance, like a parrot. Hearts = tamed!
 - **Modes:** right-click a tamed parakeet to switch between **Follow → Sit → Stand**. A message
