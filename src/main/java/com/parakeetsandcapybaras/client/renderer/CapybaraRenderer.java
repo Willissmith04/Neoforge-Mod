@@ -27,11 +27,20 @@ public class CapybaraRenderer extends MobRenderer<Capybara, CapybaraRenderState,
     public void extractRenderState(Capybara capybara, CapybaraRenderState state, float partialTick) {
         super.extractRenderState(capybara, state, partialTick);
         state.isSitting = capybara.isInSittingPose();
+        state.idleAnimationState.copyFrom(capybara.idleAnimationState);
+        state.sniffAnimationState.copyFrom(capybara.sniffAnimationState);
+        state.deathAnimationState.copyFrom(capybara.deathAnimationState);
     }
 
     @Override
     public ResourceLocation getTextureLocation(CapybaraRenderState state) {
         return TEXTURE;
+    }
+
+    /** Don't tip over sideways when dying: the capybara has its own death animation. */
+    @Override
+    protected float getFlipDegrees() {
+        return 0.0F;
     }
 
     /** Babies are drawn at half size. */

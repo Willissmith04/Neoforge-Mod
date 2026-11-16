@@ -10,12 +10,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -45,8 +47,13 @@ import net.minecraft.world.phys.Vec3;
 /**
  * The capybara: a calm, tameable animal.
  *
+ * <p>Model, texture and animations: converted from the Nog's Menagerie nm_capybara model. Stats
+ * follow its MythicMobs config: 24 health, no attack, silent apart from deep strider hurt/death
+ * sounds, and highly flammable (4x fire damage).</p>
+ *
  * <ul>
  *   <li>Tame it with melon slices (1 in 3 chance), then feed it melons to breed it.</li>
+ *   <li>Right-click with an empty hand and it sniffs you.</li>
  *   <li>Right-click a tamed capybara to cycle Follow -> Sit -> Wander.</li>
  *   <li>While sitting it lies flat on its belly with its legs spread out.</li>
  *   <li>Baby capybaras like to ride on an adult's back, like baby striders do. Right-click the
@@ -60,6 +67,19 @@ public class Capybara extends TamableAnimal {
     private Mode mode = Mode.FOLLOW;
     private int rideCooldown;
 
+    /** Fire hurts capybaras 4 times as much ("DamageModifiers: FIRE 4" in the config). */
+    private static final float FIRE_DAMAGE_MULTIPLIER = 4.0F;
+    /** Wait 2 seconds between sniffs (the "cd=2" in the config). */
+    private static final int SNIFF_COOLDOWN = 40;
+    private static final byte SNIFF_EVENT = 100;
+    private long lastSniffTime = -SNIFF_COOLDOWN;
+
+    // Animations (client only). The renderer copies these and the model plays the matching
+    // animation from assets/parakeetsandcapybaras/neoforge/animations/entity/.
+    public final AnimationState idleAnimationState = new AnimationState();
+    public final AnimationState sniffAnimationState = new AnimationState();
+    public final AnimationState deathAnimationState = new AnimationState();
+
     public Capybara(EntityType<? extends Capybara> type, Level level) {
         super(type, level);
     }
@@ -70,7 +90,7 @@ public class Capybara extends TamableAnimal {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Animal.createAnimalAttributes()
-                .add(Attributes.MAX_HEALTH, 14.0)
+                .add(Attributes.MAX_HEALTH, 24.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.2);
     }
 
@@ -113,6 +133,14 @@ public class Capybara extends TamableAnimal {
     @Override
     public void aiStep() {
         super.aiStep();
+        if (this.level().isClientSide) {
+            this.idleAnimationState.startIfStopped(this.tickCount);
+            if (this.isDeadOrDying()) {
+                this.deathAnimationState.startIfStopped(this.tickCount);
+            }
+        } else if (!this.isInSittingPose() && this.getNavigation().isDone() && this.random.nextInt(600) == 0) {
+            this.trySniff(); // every now and then, sniff around
+        }
         if (this.rideCooldown > 0) {
             this.rideCooldown--;
         }
@@ -142,7 +170,17 @@ public class Capybara extends TamableAnimal {
             }
         }
 
-        // 2) Not tamed + melon = try to tame (1 in 3 chance, like a wolf).
+        // 2) Empty hand = it sniffs you. (Your own capybara also changes mode, see step 5.)
+        if (stack.isEmpty() && !player.isShiftKeyDown()) {
+            if (!this.level().isClientSide) {
+                this.trySniff();
+            }
+            if (!(this.isTame() && this.isOwnedBy(player))) {
+                return InteractionResult.SUCCESS;
+            }
+        }
+
+        // 3) Not tamed + melon = try to tame (1 in 3 chance, like a wolf).
         if (!this.isTame() && this.isFood(stack)) {
             this.usePlayerItem(player, hand, stack);
             this.playSound(SoundEvents.GENERIC_EAT.value(), 1.0F, 1.0F);
@@ -159,7 +197,7 @@ public class Capybara extends TamableAnimal {
         }
 
         if (this.isTame() && this.isOwnedBy(player)) {
-            // 3) Tamed + melon = heal, grow a baby, or make it ready to breed.
+            // 4) Tamed + melon = heal, grow a baby, or make it ready to breed.
             if (this.isFood(stack)) {
                 if (this.getHealth() < this.getMaxHealth()) {
                     this.usePlayerItem(player, hand, stack);
@@ -170,7 +208,7 @@ public class Capybara extends TamableAnimal {
                 return super.mobInteract(player, hand); // the normal Animal breeding code
             }
 
-            // 4) Anything else (that isn't used on mobs, like a lead or name tag) = change mode.
+            // 5) Anything else (that isn't used on mobs, like a lead or name tag) = change mode.
             InteractionResult result = super.mobInteract(player, hand);
             if (result.consumesAction()) {
                 return result;
@@ -205,10 +243,32 @@ public class Capybara extends TamableAnimal {
         if (this.isInvulnerableTo(level, source)) {
             return false;
         }
+        if (source.is(DamageTypeTags.IS_FIRE)) {
+            amount *= FIRE_DAMAGE_MULTIPLIER; // includes lava
+        }
         if (this.mode == Mode.SIT) {
             this.setMode(Mode.FOLLOW);
         }
         return super.hurtServer(level, source, amount);
+    }
+
+    /** Server side: start a sniff (at most once every 2 seconds) and tell all players to show it. */
+    private void trySniff() {
+        long now = this.level().getGameTime();
+        if (now - this.lastSniffTime >= SNIFF_COOLDOWN) {
+            this.lastSniffTime = now;
+            this.level().broadcastEntityEvent(this, SNIFF_EVENT);
+        }
+    }
+
+    /** Client side: receives the sniff sent by {@link #trySniff()}. */
+    @Override
+    public void handleEntityEvent(byte id) {
+        if (id == SNIFF_EVENT) {
+            this.sniffAnimationState.start(this.tickCount);
+        } else {
+            super.handleEntityEvent(id);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -243,7 +303,7 @@ public class Capybara extends TamableAnimal {
     @Override
     protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float partialTick) {
         Vec3 point = super.getPassengerAttachmentPoint(passenger, dimensions, partialTick);
-        return this.isInSittingPose() ? point.subtract(0.0, 0.25, 0.0) : point;
+        return this.isInSittingPose() ? point.subtract(0.0, 5.0 / 16.0, 0.0) : point; // the body sinks 5 pixels
     }
 
     /** When a riding baby grows up it climbs down. */
@@ -316,33 +376,34 @@ public class Capybara extends TamableAnimal {
     }
 
     // ------------------------------------------------------------------
-    // Sounds (capybaras make soft little squeaks)
+    // Sounds: capybaras are silent, except for deep strider sounds when hurt or killed
     // ------------------------------------------------------------------
 
     @Nullable
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.ARMADILLO_AMBIENT;
+        return null;
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource damageSource) {
-        return SoundEvents.ARMADILLO_HURT;
+        return SoundEvents.STRIDER_HURT;
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.ARMADILLO_DEATH;
+        return SoundEvents.STRIDER_DEATH;
     }
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        this.playSound(SoundEvents.ARMADILLO_STEP, 0.15F, 1.0F);
+        // silent
     }
 
+    /** Pitch 0.8: a bit deeper than normal. */
     @Override
-    public int getAmbientSoundInterval() {
-        return 200; // calm animals: talk less often than most mobs
+    public float getVoicePitch() {
+        return 0.8F;
     }
 
     // ------------------------------------------------------------------

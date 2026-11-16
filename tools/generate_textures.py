@@ -1,5 +1,5 @@
 """
-Generates the capybara and bird cage textures (PNG images) as pixel art.
+Generates the bird cage textures (PNG images) as pixel art.
 
 You do NOT need to run this to play or build the mod - the finished PNG files are already in
 src/main/resources/assets/parakeetsandcapybaras/textures/. It is here so you can see how they were
@@ -65,110 +65,8 @@ def fill(img, rect, color_fn):
 # tools/convert_budgie_models.py.
 
 
-# ---------------------------------------------------------------------------------------------
-# Capybara (CapybaraModel, 64x64 texture)
-#
-# Style: dark, blotchy brown fur, a slightly lighter back, a muzzle that fades to almost black
-# at the front, dark ears and dark feet.
-# ---------------------------------------------------------------------------------------------
-def make_capybara():
-    rnd = random.Random("capybara")
-    fur = rgb(0x573D27)
-    back = rgb(0x634630)
-    belly = rgb(0x45301E)
-    muzzle = rgb(0x2A1C13)
-    nose = rgb(0x1C140E)
-    nostril = rgb(0x0D0805)
-    eye = rgb(0x120908)
-    ear = rgb(0x2E241B)
-    ear_inner = rgb(0x1E1712)
-    foot = rgb(0x28201A)
-    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-
-    # A blotch map: big soft patches of lighter and darker fur, like the reference picture.
-    blotch = {}
-
-    def blotchy(base, strength=9):
-        def px(x, y, w, h):
-            key = (id(base), x // 2, y // 2, w, h)
-            if key not in blotch:
-                blotch[key] = rnd.randint(-strength, strength)
-            return shade(base, blotch[key] + rnd.randint(-4, 4))
-        return px
-
-    # Body (0,0) 10x9x16
-    body = Box(0, 0, 10, 9, 16).faces()
-    fill(img, body["top"], blotchy(back))
-    fill(img, body["bottom"], blotchy(belly, 6))
-    for key in ("right", "left"):
-        fill(img, body[key], lambda x, y, w, h: blotchy(back)(x, y, w, h) if y < 2 else blotchy(fur)(x, y, w, h))
-    fill(img, body["front"], blotchy(fur))
-    fill(img, body["back"], blotchy(fur))
-
-    # Head (0,25) 7x7x8. The sides get darker towards the front (the muzzle).
-    head = Box(0, 25, 7, 7, 8).faces()
-
-    def side_px(front_is_right):
-        def px(x, y, w, h):
-            dist = (w - 1 - x) if front_is_right else x       # 0 = at the front
-            base = shade(fur, -16) if dist <= 1 else (shade(fur, -8) if dist <= 3 else fur)
-            return blotchy(base, 10)(x, y, w, h)
-        return px
-
-    fill(img, head["right"], side_px(True))
-    fill(img, head["left"], side_px(False))
-    fill(img, head["top"], lambda x, y, w, h: blotchy(shade(fur, -12) if y == h - 1 else back, 10)(x, y, w, h))
-    fill(img, head["bottom"], blotchy(shade(fur, -10), 6))
-    fill(img, head["front"], blotchy(muzzle, 6))
-    fill(img, head["back"], blotchy(fur, 10))
-    hx, hy, hw, hh = head["right"]
-    img.putpixel((hx + hw - 4, hy + 1), eye)
-    img.putpixel((hx + hw - 3, hy + 1), eye)
-    hx, hy, hw, hh = head["left"]
-    img.putpixel((hx + 3, hy + 1), eye)
-    img.putpixel((hx + 2, hy + 1), eye)
-
-    # Snout (32,25) 5x5x4: long and blunt, getting darker towards the tip, with nostrils
-    n = Box(32, 25, 5, 5, 4).faces()
-
-    def snout_side(front_is_right):
-        def px(x, y, w, h):
-            dist = (w - 1 - x) if front_is_right else x   # 0 = at the tip
-            base = nose if dist == 0 else (muzzle if dist == 1 else shade(fur, -16))
-            return shade(base, rnd.randint(-3, 4))
-        return px
-
-    fill(img, n["right"], snout_side(True))
-    fill(img, n["left"], snout_side(False))
-    fill(img, n["top"], lambda x, y, w, h: shade(nose if y == h - 1 else (muzzle if y == h - 2 else shade(fur, -16)), rnd.randint(-3, 4)))
-    fill(img, n["bottom"], lambda *a: shade(muzzle, rnd.randint(-3, 3)))
-    fill(img, n["front"], lambda *a: shade(nose, rnd.randint(-3, 4)))
-    fill(img, n["back"], lambda *a: muzzle)
-    nx, ny, nw, nh = n["front"]
-    img.putpixel((nx + 1, ny + 1), nostril)
-    img.putpixel((nx + 3, ny + 1), nostril)
-    for x in range(1, nw - 1):
-        img.putpixel((nx + x, ny + nh - 2), shade(nose, -8))  # mouth line
-
-    # Ears (52,25) and (52,29) 2x2x1
-    for v in (25, 29):
-        for key, f in Box(52, v, 2, 2, 1).faces().items():
-            fill(img, f, lambda x, y, w, h, key=key: ear_inner if key == "front" else shade(ear, rnd.randint(-4, 4)))
-
-    # Legs (0,41) 3x5x3: fur at the top, dark feet at the bottom
-    leg = Box(0, 41, 3, 5, 3).faces()
-    for key, f in leg.items():
-        def leg_px(x, y, w, h, key=key):
-            if key == "bottom" or y >= h - 2:
-                return shade(foot, rnd.randint(-3, 3))
-            if key == "top":
-                return blotchy(fur, 8)(x, y, w, h)
-            return blotchy(shade(fur, -10), 8)(x, y, w, h)
-        fill(img, f, leg_px)
-
-    out = os.path.join(ROOT, "entity", "capybara", "capybara.png")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    img.save(out)
+# The capybara texture is NOT made here: it comes from the capybara Blockbench model, see
+# tools/convert_capybara_model.py.
 
 
 # ---------------------------------------------------------------------------------------------
@@ -206,7 +104,6 @@ def make_cage(name, colours):
 
 
 if __name__ == "__main__":
-    make_capybara()
     for metal, colours in CAGE_METALS.items():
         make_cage(metal, colours)
     print("Textures written to", os.path.abspath(ROOT))

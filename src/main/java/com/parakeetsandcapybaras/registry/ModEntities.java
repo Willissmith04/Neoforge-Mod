@@ -29,5 +29,5 @@ public class ModEntities {
             "capybara",
             Capybara::new,
             MobCategory.CREATURE,
-            builder -> builder.sized(0.9F, 1.0F).eyeHeight(0.85F).passengerAttachments(0.875F).clientTrackingRange(10));
+            builder -> builder.sized(0.9F, 1.1F).eyeHeight(0.9F).passengerAttachments(0.875F).clientTrackingRange(10));
 }

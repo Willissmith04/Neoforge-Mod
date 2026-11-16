@@ -39,8 +39,8 @@ Vanilla parrots are not changed. Parakeets are a separate mob that lives alongsi
 - **Careful:** cookies are poisonous to parakeets, just like parrots.
 
 ### Capybara
-- **Where:** grasslands (plains, sunflower plains, meadow, savanna, savanna plateau), forests and
-  sparse jungles, in groups of up to 4.
+- **Where:** grasslands (plains, sunflower plains, meadow, savanna, savanna plateau), swamps,
+  forests and sparse jungles, on grass blocks, in groups of up to 4.
   They use the panda's spawn weight from normal jungles (**weight 1**), so they are **rare**.
   See [Changing spawn rates](#changing-spawn-rates) to make them more common.
 - **Tame:** right-click with a **melon slice** (or a melon block). 1 in 3 chance per melon.
@@ -50,6 +50,12 @@ Vanilla parrots are not changed. Parakeets are a separate mob that lives alongsi
 - **Baby rides:** like baby striders, baby capybaras climb onto an adult's back. Sometimes an adult
   even spawns with a baby already riding it. **Right-click the baby (or the adult carrying it)
   with an empty hand** to take the baby off. It waits a minute before climbing back on.
+- **Sniff:** right-click a capybara with an empty hand and it sniffs you (it also sniffs around
+  on its own now and then).
+- **Stats:** 24 health, no attack, quiet apart from deep strider sounds when hurt, and very
+  flammable: fire and lava do 4x damage.
+- **Model and animations:** converted from the *Nog's Menagerie* capybara Blockbench model
+  (idle, walk, sniff and death animations) with `tools/convert_capybara_model.py`.
 
 ### Bird Cage
 - **Craft** (gold or iron):
@@ -112,7 +118,8 @@ src/main/java/com/parakeetsandcapybaras/
     ├── ClientModEvents.java       registers renderers and models
     ├── model/ParakeetModel.java   plays the budgie animations (idle, walk, tricks, hurt, death, fly, sit)
     ├── model/ParakeetGeometry.java  the budgie's 3D shape (generated from the .bbmodel files)
-    ├── model/CapybaraModel.java   the capybara's 3D model and animations (incl. sitting pose)
+    ├── model/CapybaraModel.java   plays the capybara animations (idle, walk, sniff, death, sitting pose)
+    ├── model/CapybaraGeometry.java  the capybara's 3D shape (generated from the .bbmodel file)
     └── renderer/                  renderers for the mobs, the shoulder parakeet and the cage bird
 
 src/main/resources/
@@ -133,6 +140,9 @@ src/main/resources/
 tools/generate_textures.py         paints the capybara and bird cage textures (optional)
 tools/convert_budgie_models.py     converts the budgie .bbmodel files into the model, textures
                                    and animations (python tools/convert_budgie_models.py <folder>)
+tools/convert_capybara_model.py    the same for the capybara
+                                   (python tools/convert_capybara_model.py <nm_capybara.bbmodel>)
+tools/bbmodel_converter.py         the shared Blockbench -> Minecraft conversion code
 ```
 
 ## Easy things to change
@@ -163,8 +173,8 @@ Edit the PNGs in `assets/parakeetsandcapybaras/textures/`, or change the colours
 `tools/generate_textures.py` and run `python tools/generate_textures.py`.
 
 ## Credits and licence
-- The budgie model, textures and animations are from **Nog's Menagerie** (Nog's Budgies). They are
+- The budgie and capybara models, textures and animations are from **Nog's Menagerie**. They are
   not covered by this project's licence; check that pack's own licence before sharing them.
-- The capybara and bird cage textures were made from scratch for this mod.
+- The bird cage textures were made from scratch for this mod.
 - The code is MIT licensed. The parts based on Minecraft's Parrot class follow Mojang's code, as
   most mods do.

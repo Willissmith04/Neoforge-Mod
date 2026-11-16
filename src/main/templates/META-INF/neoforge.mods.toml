@@ -39,7 +39,7 @@ displayName="${mod_name}" #mandatory
 #logoFile="examplemod.png" #optional
 
 # A text field displayed in the mod UI
-credits="Budgie model, textures and animations by Nog's Menagerie" #optional
+credits="Budgie and capybara models, textures and animations by Nog's Menagerie" #optional
 
 # The authors of the mod, displayed in the mod UI (optional)
 #authors=""
