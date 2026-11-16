@@ -1,6 +1,6 @@
 # Parakeets and Capybaras
 
-A beginner-friendly Minecraft mod for **Minecraft 1.21.4** on **NeoForge** that adds:
+A beginner-friendly Minecraft mod for **Minecraft 1.21.1** on **NeoForge** (21.1.266 or newer) that adds:
 
 | | What it is |
 |---|---|
@@ -84,7 +84,9 @@ You need **Java 21** (for example from https://adoptium.net).
 ```
 
 To play with it normally, copy `build/libs/parakeetsandcapybaras-1.0.0.jar` into the `mods`
-folder of a Minecraft 1.21.4 NeoForge install.
+folder of a Minecraft 1.21.1 NeoForge install.
+
+> Looking for the **Minecraft 1.21.4** version? It's saved on the `minecraft-1.21.4` branch.
 
 In IntelliJ IDEA: *File → Open* the project folder, wait for Gradle to finish importing, then use
 the `Client` run configuration.
@@ -128,7 +130,7 @@ src/main/resources/
 │   ├── textures/                  PNG textures (entity/ and block/)
 │   ├── models/block/              the bird cage 3D block model
 │   ├── blockstates/               which model to use for each cage direction / hanging
-│   └── items/                     item models (cages, spawn egg colours)
+│   └── models/item/               item models (cages and spawn eggs)
 └── data/                          game RULES
     ├── parakeetsandcapybaras/neoforge/biome_modifier/   spawn weights and group sizes
     ├── parakeetsandcapybaras/tags/worldgen/biome/       which biomes each mob spawns in
@@ -165,7 +167,7 @@ Edit the biome lists in `data/parakeetsandcapybaras/tags/worldgen/biome/`. You c
 Edit `data/parakeetsandcapybaras/tags/item/parakeet_food.json` or `capybara_food.json`.
 
 ### Changing the parakeet's size
-Parakeets are drawn a little smaller than a parrot. Change `SIZE = 0.7F` in
+Parakeets are drawn a little smaller than a parrot. Change `SIZE = 1.0F` in
 `client/renderer/ParakeetRenderer.java` (and the hitbox numbers in `registry/ModEntities.java`).
 
 ### Changing colours or textures

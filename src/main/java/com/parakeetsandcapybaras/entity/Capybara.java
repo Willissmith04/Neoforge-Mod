@@ -20,7 +20,8 @@ import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -89,7 +90,7 @@ public class Capybara extends TamableAnimal {
     // ------------------------------------------------------------------
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Animal.createAnimalAttributes()
+        return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 24.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.2);
     }
@@ -183,7 +184,7 @@ public class Capybara extends TamableAnimal {
         // 3) Not tamed + melon = try to tame (1 in 3 chance, like a wolf).
         if (!this.isTame() && this.isFood(stack)) {
             this.usePlayerItem(player, hand, stack);
-            this.playSound(SoundEvents.GENERIC_EAT.value(), 1.0F, 1.0F);
+            this.playSound(SoundEvents.GENERIC_EAT, 1.0F, 1.0F);
             if (!this.level().isClientSide) {
                 if (this.random.nextInt(3) == 0 && !net.neoforged.neoforge.event.EventHooks.onAnimalTame(this, player)) {
                     this.tame(player);
@@ -202,7 +203,7 @@ public class Capybara extends TamableAnimal {
                 if (this.getHealth() < this.getMaxHealth()) {
                     this.usePlayerItem(player, hand, stack);
                     this.heal(4.0F);
-                    this.playSound(SoundEvents.GENERIC_EAT.value(), 1.0F, 1.0F);
+                    this.playSound(SoundEvents.GENERIC_EAT, 1.0F, 1.0F);
                     return InteractionResult.SUCCESS;
                 }
                 return super.mobInteract(player, hand); // the normal Animal breeding code
@@ -239,17 +240,17 @@ public class Capybara extends TamableAnimal {
     }
 
     @Override
-    public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
-        if (this.isInvulnerableTo(level, source)) {
+    public boolean hurt(DamageSource source, float amount) {
+        if (this.isInvulnerableTo(source)) {
             return false;
         }
         if (source.is(DamageTypeTags.IS_FIRE)) {
             amount *= FIRE_DAMAGE_MULTIPLIER; // includes lava
         }
-        if (this.mode == Mode.SIT) {
+        if (!this.level().isClientSide && this.mode == Mode.SIT) {
             this.setMode(Mode.FOLLOW);
         }
-        return super.hurtServer(level, source, amount);
+        return super.hurt(source, amount);
     }
 
     /** Server side: start a sniff (at most once every 2 seconds) and tell all players to show it. */
@@ -336,7 +337,7 @@ public class Capybara extends TamableAnimal {
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob otherParent) {
-        Capybara baby = ModEntities.CAPYBARA.get().create(level, EntitySpawnReason.BREEDING);
+        Capybara baby = ModEntities.CAPYBARA.get().create(level);
         if (baby != null && this.isTame() && this.getOwnerUUID() != null) {
             baby.setOwnerUUID(this.getOwnerUUID());
             baby.setTame(true, true);
@@ -354,17 +355,17 @@ public class Capybara extends TamableAnimal {
      */
     @Nullable
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData groupData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData groupData) {
         if (this.isBaby()) {
             return super.finalizeSpawn(level, difficulty, reason, groupData);
         }
 
-        if (reason != EntitySpawnReason.JOCKEY && level.getRandom().nextInt(5) == 0) {
-            Capybara baby = ModEntities.CAPYBARA.get().create(level.getLevel(), EntitySpawnReason.JOCKEY);
+        if (reason != MobSpawnType.JOCKEY && level.getRandom().nextInt(5) == 0) {
+            Capybara baby = ModEntities.CAPYBARA.get().create(level.getLevel());
             if (baby != null) {
                 baby.setAge(-24000);
                 baby.moveTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), 0.0F);
-                baby.finalizeSpawn(level, difficulty, EntitySpawnReason.JOCKEY, null);
+                baby.finalizeSpawn(level, difficulty, MobSpawnType.JOCKEY, null);
                 baby.startRiding(this, true);
             }
         }

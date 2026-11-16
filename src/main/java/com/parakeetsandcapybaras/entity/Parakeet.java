@@ -33,7 +33,8 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -128,8 +129,9 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     public final AnimationState deathAnimationState = new AnimationState();
     /** Which of the 3 hurt animations is playing (0, 1 or 2). */
     public int hurtVariant;
-    /** How long the dance animation is, in milliseconds (it repeats while a jukebox plays). */
-    private static final long DANCE_LENGTH_MS = 1400;
+    /** How long the dance animation is, in ticks (1.4 seconds; it repeats while a jukebox plays). */
+    private static final int DANCE_LENGTH_TICKS = 28;
+    private int danceStartTick;
     /** The death animation lasts 1.5 seconds, so the body stays a little longer than usual. */
     private static final int DEATH_TICKS = 30;
 
@@ -147,7 +149,7 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
 
     /** Health 12, speed 0.2 and no attack damage, as in the budgie configs. Registered in CommonModEvents. */
     public static AttributeSupplier.Builder createAttributes() {
-        return Animal.createAnimalAttributes()
+        return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 12.0)
                 .add(Attributes.FLYING_SPEED, 0.4F)
                 .add(Attributes.MOVEMENT_SPEED, 0.2F)
@@ -391,8 +393,8 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     @Override
-    public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
-        if (this.isInvulnerableTo(level, source)) {
+    public boolean hurt(DamageSource source, float amount) {
+        if (this.isInvulnerableTo(source)) {
             return false;
         }
         // Fire and lava hurt budgies 40% more.
@@ -400,10 +402,10 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
             amount *= FIRE_DAMAGE_MULTIPLIER;
         }
         // Like a parrot: getting hurt makes it stand up.
-        if (this.mode == Mode.SIT) {
+        if (!this.level().isClientSide && this.mode == Mode.SIT) {
             this.setMode(Mode.FOLLOW);
         }
-        return super.hurtServer(level, source, amount);
+        return super.hurt(source, amount);
     }
 
     /** Server side: pick a random trick (at most once every 3 seconds) and tell all players to show it. */
@@ -445,8 +447,9 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
         this.idleAnimationState.startIfStopped(this.tickCount);
         // Near a playing jukebox: keep repeating the dance.
         if (this.partyParakeet) {
-            if (!this.danceAnimationState.isStarted() || this.danceAnimationState.getTimeInMillis(this.tickCount) > DANCE_LENGTH_MS) {
+            if (!this.danceAnimationState.isStarted() || this.tickCount - this.danceStartTick > DANCE_LENGTH_TICKS) {
                 this.danceAnimationState.start(this.tickCount);
+                this.danceStartTick = this.tickCount;
             }
         }
         if (this.isDeadOrDying()) {
@@ -492,7 +495,7 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob otherParent) {
-        Parakeet baby = ModEntities.PARAKEET.get().create(level, EntitySpawnReason.BREEDING);
+        Parakeet baby = ModEntities.PARAKEET.get().create(level);
         if (baby != null) {
             // The chick gets the colour of one of its parents, with a small chance of a random "mutation".
             if (this.random.nextInt(10) == 0 || !(otherParent instanceof Parakeet otherParakeet)) {
@@ -515,7 +518,7 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
 
     @Nullable
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData groupData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData groupData) {
         this.setVariant(Util.getRandom(Variant.values(), level.getRandom()));
         if (groupData == null) {
             groupData = new AgeableMobGroupData(false); // wild parakeets spawn as adults
@@ -524,7 +527,7 @@ public class Parakeet extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     /** Same rule as parrots: must spawn on leaves, grass, logs or air with enough light. */
-    public static boolean checkParakeetSpawnRules(EntityType<Parakeet> type, LevelAccessor level, EntitySpawnReason reason, BlockPos pos, RandomSource random) {
+    public static boolean checkParakeetSpawnRules(EntityType<Parakeet> type, LevelAccessor level, MobSpawnType reason, BlockPos pos, RandomSource random) {
         return level.getBlockState(pos.below()).is(BlockTags.PARROTS_SPAWNABLE_ON) && isBrightEnoughToSpawn(level, pos);
     }
 

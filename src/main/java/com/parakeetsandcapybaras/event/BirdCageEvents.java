@@ -57,7 +57,7 @@ public class BirdCageEvents {
         }
 
         if (bird.isLeashed()) {
-            bird.dropLeash(); // drops the lead as an item
+            bird.dropLeash(true, true); // drops the lead as an item
         }
 
         // Save everything about the bird (type, colour, name, owner, health...) like a save file does.

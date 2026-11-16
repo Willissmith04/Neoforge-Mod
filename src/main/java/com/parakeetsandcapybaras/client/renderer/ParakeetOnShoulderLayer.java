@@ -1,51 +1,39 @@
 package com.parakeetsandcapybaras.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.parakeetsandcapybaras.ParakeetsAndCapybaras;
+import com.parakeetsandcapybaras.client.model.ModModelLayers;
+import com.parakeetsandcapybaras.client.model.ParakeetModel;
 import com.parakeetsandcapybaras.entity.Parakeet;
 import com.parakeetsandcapybaras.registry.ModEntities;
 import javax.annotation.Nullable;
-import com.parakeetsandcapybaras.client.model.ModModelLayers;
-import com.parakeetsandcapybaras.client.model.ParakeetModel;
-import net.minecraft.client.model.ParrotModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.EntityModelSet;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
-import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.player.Player;
 
 /**
- * Draws parakeets sitting on a player's shoulders. This is a copy of Minecraft's
- * ParrotOnShoulderLayer, changed to draw parakeets (Minecraft's own layer only draws parrots).
- *
- * <p>Since Minecraft 1.21.2, renderers only get a "render state" instead of the player itself,
- * so we use NeoForge "render data": {@link #storeShoulderParakeets} copies the parakeet colours
- * from the player into the render state every frame, and {@link #render} reads them back.</p>
+ * Draws parakeets sitting on a player's shoulders. Based on Minecraft's ParrotOnShoulderLayer,
+ * which only draws parrots. A bird on a shoulder isn't a real entity any more: it's saved as data
+ * on the player, so we read its colour from that data.
  */
-public class ParakeetOnShoulderLayer extends RenderLayer<PlayerRenderState, PlayerModel> {
-    public static final ContextKey<Parakeet.Variant> LEFT_SHOULDER = new ContextKey<>(ParakeetsAndCapybaras.id("parakeet_on_left_shoulder"));
-    public static final ContextKey<Parakeet.Variant> RIGHT_SHOULDER = new ContextKey<>(ParakeetsAndCapybaras.id("parakeet_on_right_shoulder"));
-
+public class ParakeetOnShoulderLayer<T extends Player> extends RenderLayer<T, PlayerModel<T>> {
     private final ParakeetModel model;
-    private final ParakeetRenderState parakeetState = new ParakeetRenderState();
 
-    public ParakeetOnShoulderLayer(RenderLayerParent<PlayerRenderState, PlayerModel> renderer, EntityModelSet modelSet) {
+    public ParakeetOnShoulderLayer(RenderLayerParent<T, PlayerModel<T>> renderer, EntityModelSet modelSet) {
         super(renderer);
         this.model = new ParakeetModel(modelSet.bakeLayer(ModModelLayers.PARAKEET));
-        this.parakeetState.pose = ParrotModel.Pose.ON_SHOULDER;
-        this.parakeetState.idleAnimationState.start(0); // keep gently moving while on the shoulder
     }
 
-    /** Registered in ClientModEvents. Runs every frame for every player that is drawn. */
-    public static void storeShoulderParakeets(AbstractClientPlayer player, PlayerRenderState state) {
-        state.setRenderData(LEFT_SHOULDER, getParakeetVariant(player.getShoulderEntityLeft()));
-        state.setRenderData(RIGHT_SHOULDER, getParakeetVariant(player.getShoulderEntityRight()));
+    @Override
+    public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, T player, float limbSwing, float limbSwingAmount,
+                       float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
+        this.renderOnShoulder(poseStack, buffer, packedLight, player, player.getShoulderEntityLeft(), true, ageInTicks, netHeadYaw, headPitch);
+        this.renderOnShoulder(poseStack, buffer, packedLight, player, player.getShoulderEntityRight(), false, ageInTicks, netHeadYaw, headPitch);
     }
 
     @Nullable
@@ -56,32 +44,19 @@ public class ParakeetOnShoulderLayer extends RenderLayer<PlayerRenderState, Play
         return isParakeet ? Parakeet.Variant.byId(shoulderEntity.getInt("Variant")) : null;
     }
 
-    @Override
-    public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, PlayerRenderState state, float yRot, float xRot) {
-        Parakeet.Variant left = state.getRenderData(LEFT_SHOULDER);
-        if (left != null) {
-            this.renderOnShoulder(poseStack, buffer, packedLight, state, left, yRot, xRot, true);
+    private void renderOnShoulder(PoseStack poseStack, MultiBufferSource buffer, int packedLight, T player, CompoundTag shoulderEntity,
+                                  boolean leftShoulder, float ageInTicks, float netHeadYaw, float headPitch) {
+        Parakeet.Variant variant = getParakeetVariant(shoulderEntity);
+        if (variant == null) {
+            return;
         }
-        Parakeet.Variant right = state.getRenderData(RIGHT_SHOULDER);
-        if (right != null) {
-            this.renderOnShoulder(poseStack, buffer, packedLight, state, right, yRot, xRot, false);
-        }
-    }
-
-    private void renderOnShoulder(PoseStack poseStack, MultiBufferSource buffer, int packedLight, PlayerRenderState state,
-                                  Parakeet.Variant variant, float yRot, float xRot, boolean leftShoulder) {
         poseStack.pushPose();
-        poseStack.translate(leftShoulder ? 0.4F : -0.4F, state.isCrouching ? -1.3F : -1.5F, 0.0F);
-        // Shrink around the bird's feet (1.5 blocks below the model's origin) so it still sits on the shoulder.
+        poseStack.translate(leftShoulder ? 0.4F : -0.4F, player.isCrouching() ? -1.3F : -1.5F, 0.0F);
+        // Resize around the bird's feet (1.5 blocks below the model's origin) so it stays on the shoulder.
         poseStack.translate(0.0F, 1.5F, 0.0F);
         poseStack.scale(ParakeetRenderer.SIZE, ParakeetRenderer.SIZE, ParakeetRenderer.SIZE);
         poseStack.translate(0.0F, -1.5F, 0.0F);
-        this.parakeetState.ageInTicks = state.ageInTicks;
-        this.parakeetState.walkAnimationPos = state.walkAnimationPos;
-        this.parakeetState.walkAnimationSpeed = state.walkAnimationSpeed;
-        this.parakeetState.yRot = yRot;
-        this.parakeetState.xRot = xRot;
-        this.model.setupAnim(this.parakeetState);
+        this.model.setupOnShoulder(netHeadYaw, headPitch, ageInTicks);
         this.model.renderToBuffer(poseStack, buffer.getBuffer(this.model.renderType(ParakeetRenderer.getTexture(variant))),
                 packedLight, OverlayTexture.NO_OVERLAY);
         poseStack.popPose();

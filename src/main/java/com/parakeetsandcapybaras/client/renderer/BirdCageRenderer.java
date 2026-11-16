@@ -55,7 +55,7 @@ public class BirdCageRenderer implements BlockEntityRenderer<BirdCageBlockEntity
         poseStack.translate(0.5F, PERCH_HEIGHT, 0.5F);
         poseStack.scale(BIRD_SCALE, BIRD_SCALE, BIRD_SCALE);
         this.entityRenderer.setRenderShadow(false);
-        this.entityRenderer.render(bird, 0.0, 0.0, 0.0, partialTick, poseStack, buffer, packedLight);
+        this.entityRenderer.render(bird, 0.0, 0.0, 0.0, yaw, partialTick, poseStack, buffer, packedLight);
         this.entityRenderer.setRenderShadow(true);
         poseStack.popPose();
     }

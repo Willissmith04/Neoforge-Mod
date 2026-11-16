@@ -1,8 +1,8 @@
 package com.parakeetsandcapybaras.client.model;
 
 import com.parakeetsandcapybaras.ParakeetsAndCapybaras;
-import com.parakeetsandcapybaras.client.renderer.CapybaraRenderState;
-import net.minecraft.client.model.EntityModel;
+import com.parakeetsandcapybaras.entity.Capybara;
+import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.util.Mth;
@@ -21,7 +21,7 @@ import net.neoforged.neoforge.client.entity.animation.json.AnimationLoader;
  *       below, because the Blockbench model has no sitting animation.</li>
  * </ul>
  */
-public class CapybaraModel extends EntityModel<CapybaraRenderState> {
+public class CapybaraModel extends HierarchicalModel<Capybara> {
     private static final AnimationHolder IDLE = animation("capybara_idle");
     private static final AnimationHolder WALK = animation("capybara_walk");
     private static final AnimationHolder SNIFF = animation("capybara_sniff");
@@ -31,6 +31,7 @@ public class CapybaraModel extends EntityModel<CapybaraRenderState> {
     private static final float SIT_DROP = 5.0F;
     private static final float LEG_SPREAD = 0.4F;
 
+    private final ModelPart root;
     private final ModelPart base;
     private final ModelPart head;
     private final ModelPart rightFrontLeg;
@@ -39,7 +40,7 @@ public class CapybaraModel extends EntityModel<CapybaraRenderState> {
     private final ModelPart leftHindLeg;
 
     public CapybaraModel(ModelPart root) {
-        super(root);
+        this.root = root;
         this.base = root.getChild("base");
         ModelPart base2 = this.base.getChild("base_2");
         this.head = base2.getChild("torso").getChild("head");
@@ -57,19 +58,24 @@ public class CapybaraModel extends EntityModel<CapybaraRenderState> {
         return AnimationLoader.INSTANCE.getAnimationHolder(ParakeetsAndCapybaras.id(name));
     }
 
+    @Override
+    public ModelPart root() {
+        return this.root;
+    }
+
     /** Called every frame to pose the model. */
     @Override
-    public void setupAnim(CapybaraRenderState state) {
-        super.setupAnim(state); // puts every part back in its default position first
+    public void setupAnim(Capybara capybara, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+        this.root.getAllParts().forEach(ModelPart::resetPose); // put every part back in its default position first
 
         // Turn the head to look where the capybara is looking.
-        this.head.xRot += state.xRot * Mth.DEG_TO_RAD;
-        this.head.yRot += state.yRot * Mth.DEG_TO_RAD;
+        this.head.xRot += headPitch * Mth.DEG_TO_RAD;
+        this.head.yRot += netHeadYaw * Mth.DEG_TO_RAD;
 
         // Gentle breathing / tail movement all the time.
-        this.animate(state.idleAnimationState, IDLE, state.ageInTicks);
+        this.animate(capybara.idleAnimationState, IDLE, ageInTicks);
 
-        if (state.isSitting) {
+        if (capybara.isInSittingPose()) {
             // "Sploot": lie flat on the belly with the front legs stretched forward and the
             // back legs stretched backward, all spread a little outwards.
             this.base.y += SIT_DROP;
@@ -85,10 +91,10 @@ public class CapybaraModel extends EntityModel<CapybaraRenderState> {
             this.rightHindLeg.yRot = -LEG_SPREAD;
             this.leftHindLeg.yRot = LEG_SPREAD;
         } else {
-            this.animateWalk(WALK, state.walkAnimationPos, state.walkAnimationSpeed, 2.0F, 2.5F);
+            this.animateWalk(WALK, limbSwing, limbSwingAmount, 2.0F, 2.5F);
         }
 
-        this.animate(state.sniffAnimationState, SNIFF, state.ageInTicks);
-        this.animate(state.deathAnimationState, DEATH, state.ageInTicks);
+        this.animate(capybara.sniffAnimationState, SNIFF, ageInTicks);
+        this.animate(capybara.deathAnimationState, DEATH, ageInTicks);
     }
 }

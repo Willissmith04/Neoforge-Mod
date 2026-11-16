@@ -10,7 +10,7 @@ import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 
 /** Draws capybaras using {@link CapybaraModel} and the capybara texture. */
-public class CapybaraRenderer extends MobRenderer<Capybara, CapybaraRenderState, CapybaraModel> {
+public class CapybaraRenderer extends MobRenderer<Capybara, CapybaraModel> {
     private static final ResourceLocation TEXTURE = ParakeetsAndCapybaras.id("textures/entity/capybara/capybara.png");
 
     public CapybaraRenderer(EntityRendererProvider.Context context) {
@@ -18,35 +18,20 @@ public class CapybaraRenderer extends MobRenderer<Capybara, CapybaraRenderState,
     }
 
     @Override
-    public CapybaraRenderState createRenderState() {
-        return new CapybaraRenderState();
-    }
-
-    /** Copies what we need from the entity into the render state. */
-    @Override
-    public void extractRenderState(Capybara capybara, CapybaraRenderState state, float partialTick) {
-        super.extractRenderState(capybara, state, partialTick);
-        state.isSitting = capybara.isInSittingPose();
-        state.idleAnimationState.copyFrom(capybara.idleAnimationState);
-        state.sniffAnimationState.copyFrom(capybara.sniffAnimationState);
-        state.deathAnimationState.copyFrom(capybara.deathAnimationState);
-    }
-
-    @Override
-    public ResourceLocation getTextureLocation(CapybaraRenderState state) {
+    public ResourceLocation getTextureLocation(Capybara capybara) {
         return TEXTURE;
     }
 
     /** Don't tip over sideways when dying: the capybara has its own death animation. */
     @Override
-    protected float getFlipDegrees() {
+    protected float getFlipDegrees(Capybara capybara) {
         return 0.0F;
     }
 
     /** Babies are drawn at half size. */
     @Override
-    protected void scale(CapybaraRenderState state, PoseStack poseStack) {
-        if (state.isBaby) {
+    protected void scale(Capybara capybara, PoseStack poseStack, float partialTick) {
+        if (capybara.isBaby()) {
             poseStack.scale(0.5F, 0.5F, 0.5F);
         }
     }

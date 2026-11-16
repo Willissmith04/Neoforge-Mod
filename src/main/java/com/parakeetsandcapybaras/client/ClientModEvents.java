@@ -10,15 +10,12 @@ import com.parakeetsandcapybaras.client.renderer.ParakeetOnShoulderLayer;
 import com.parakeetsandcapybaras.client.renderer.ParakeetRenderer;
 import com.parakeetsandcapybaras.registry.ModBlockEntities;
 import com.parakeetsandcapybaras.registry.ModEntities;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
-import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.client.resources.PlayerSkin;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 
 /**
  * Client-only setup: tells the game how to draw our mobs and the bird inside cages.
@@ -44,15 +41,9 @@ public class ClientModEvents {
     @SubscribeEvent
     public static void addPlayerLayers(EntityRenderersEvent.AddLayers event) {
         for (PlayerSkin.Model skin : event.getSkins()) {
-            PlayerRenderer renderer = event.getSkin(skin);
-            if (renderer != null) {
-                renderer.addLayer(new ParakeetOnShoulderLayer(renderer, event.getEntityModels()));
+            if (event.getSkin(skin) instanceof PlayerRenderer renderer) {
+                renderer.addLayer(new ParakeetOnShoulderLayer<>(renderer, event.getEntityModels()));
             }
         }
-    }
-
-    @SubscribeEvent
-    public static void registerRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
-        event.<AbstractClientPlayer, PlayerRenderState>registerEntityModifier(PlayerRenderer.class, ParakeetOnShoulderLayer::storeShoulderParakeets);
     }
 }

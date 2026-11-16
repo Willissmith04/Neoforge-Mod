@@ -18,5 +18,5 @@ public class ModBlockEntities {
     // Both cages (gold and iron) share the same block entity type.
     public static final Supplier<BlockEntityType<BirdCageBlockEntity>> BIRD_CAGE = BLOCK_ENTITY_TYPES.register(
             "bird_cage",
-            () -> new BlockEntityType<>(BirdCageBlockEntity::new, ModBlocks.GOLD_BIRD_CAGE.get(), ModBlocks.IRON_BIRD_CAGE.get()));
+            () -> BlockEntityType.Builder.of(BirdCageBlockEntity::new, ModBlocks.GOLD_BIRD_CAGE.get(), ModBlocks.IRON_BIRD_CAGE.get()).build(null));
 }

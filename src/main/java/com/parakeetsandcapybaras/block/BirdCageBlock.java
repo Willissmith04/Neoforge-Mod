@@ -7,16 +7,14 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.EntityBlock;
@@ -29,7 +27,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -51,7 +49,7 @@ public class BirdCageBlock extends Block implements EntityBlock {
     public static final MapCodec<BirdCageBlock> CODEC = simpleCodec(BirdCageBlock::new);
 
     /** Which way the cage (and the bird inside) is facing. */
-    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
+    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     /** true = hanging from the block above, false = standing on the block below. */
     public static final BooleanProperty HANGING = BlockStateProperties.HANGING;
 
@@ -99,13 +97,13 @@ public class BirdCageBlock extends Block implements EntityBlock {
 
     /** If the supporting block is removed, the cage pops off and drops as an item (with the bird inside). */
     @Override
-    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks, BlockPos pos,
-                                     Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
+                                     BlockPos pos, BlockPos neighborPos) {
         Direction towardsSupport = state.getValue(HANGING) ? Direction.UP : Direction.DOWN;
         if (direction == towardsSupport && !state.canSurvive(level, pos)) {
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
+        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
     }
 
     @Override
@@ -164,7 +162,7 @@ public class BirdCageBlock extends Block implements EntityBlock {
                 ? Vec3.atBottomCenterOf(front)
                 : Vec3.atBottomCenterOf(pos).add(0.0, 1.0, 0.0);
 
-        EntityType.create(birdData, level, EntitySpawnReason.LOAD).ifPresent(bird -> {
+        EntityType.create(birdData, level).ifPresent(bird -> {
             bird.moveTo(spawnPos.x, spawnPos.y, spawnPos.z, facing.toYRot(), 0.0F);
             bird.setDeltaMovement(Vec3.ZERO);
             level.addFreshEntity(bird);

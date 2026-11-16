@@ -12,7 +12,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.Block;
@@ -62,7 +61,7 @@ public class BirdCageBlockEntity extends BlockEntity {
     @Nullable
     public Entity getOrCreateBirdForRendering() {
         if (this.cachedBird == null && this.hasBird() && this.level != null) {
-            Optional<Entity> bird = EntityType.create(this.birdData, this.level, EntitySpawnReason.LOAD);
+            Optional<Entity> bird = EntityType.create(this.birdData, this.level);
             this.cachedBird = bird.orElse(null);
         }
         return this.cachedBird;
