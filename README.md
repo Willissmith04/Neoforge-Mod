@@ -16,7 +16,7 @@ Vanilla parrots are not changed. Parakeets are a separate mob that lives alongsi
 
 ### Parakeet
 - **Where:** forests (forest, flower forest, birch forest, old growth birch forest, dark forest).
-  They spawn a little more often than parrots do in jungles (weight 50, groups of 1-2).
+  They spawn a little more often than parrots do in jungles (weight 60, groups of 1-2).
 - **Colours:** 10 budgie colours: green, light green, olive, green spangle, sky blue, cobalt,
   blue spangle, gray, yellow and white.
 - **Wild behaviour:** wild budgies fly around and look around, and fly away from players, unless
@@ -41,7 +41,7 @@ Vanilla parrots are not changed. Parakeets are a separate mob that lives alongsi
 ### Capybara
 - **Where:** grasslands (plains, sunflower plains, meadow, savanna, savanna plateau), swamps,
   forests and sparse jungles, on grass blocks, in groups of up to 4.
-  They are **uncommon** (**weight 3**): rarer than cows or sheep, but you'll come across them.
+  They are **uncommon** (**weight 4**): rarer than cows or sheep, but you'll come across them.
   See [Changing spawn rates](#changing-spawn-rates) to make them more common.
 - **Tame:** right-click with a **melon slice** (or a melon block). 1 in 3 chance per melon.
 - **Modes:** right-click a tamed capybara to switch between **Follow → Sit → Wander**.
@@ -153,11 +153,11 @@ tools/bbmodel_converter.py         the shared Blockbench -> Minecraft conversion
 Open `src/main/resources/data/parakeetsandcapybaras/neoforge/biome_modifier/add_capybara_spawns.json`:
 
 ```json
-"spawners": { "type": "parakeetsandcapybaras:capybara", "weight": 3, "minCount": 1, "maxCount": 4 }
+"spawners": { "type": "parakeetsandcapybaras:capybara", "weight": 4, "minCount": 1, "maxCount": 4 }
 ```
 
 A higher `weight` means more common. For comparison: cows are 8, sheep 12, parrots in jungles 40
-and pandas in bamboo jungles 80. Parakeets are 50. Try `8` if you want to meet capybaras regularly.
+and pandas in bamboo jungles 80. Parakeets are 60. Try `8` if you want to meet capybaras regularly.
 
 ### Changing where they spawn
 Edit the biome lists in `data/parakeetsandcapybaras/tags/worldgen/biome/`. You can add any biome id
