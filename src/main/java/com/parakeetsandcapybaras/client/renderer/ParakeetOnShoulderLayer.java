@@ -5,15 +5,15 @@ import com.parakeetsandcapybaras.ParakeetsAndCapybaras;
 import com.parakeetsandcapybaras.entity.Parakeet;
 import com.parakeetsandcapybaras.registry.ModEntities;
 import javax.annotation.Nullable;
+import com.parakeetsandcapybaras.client.model.ModModelLayers;
+import com.parakeetsandcapybaras.client.model.ParakeetModel;
 import net.minecraft.client.model.ParrotModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.EntityModelSet;
-import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
-import net.minecraft.client.renderer.entity.state.ParrotRenderState;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.nbt.CompoundTag;
@@ -32,12 +32,12 @@ public class ParakeetOnShoulderLayer extends RenderLayer<PlayerRenderState, Play
     public static final ContextKey<Parakeet.Variant> LEFT_SHOULDER = new ContextKey<>(ParakeetsAndCapybaras.id("parakeet_on_left_shoulder"));
     public static final ContextKey<Parakeet.Variant> RIGHT_SHOULDER = new ContextKey<>(ParakeetsAndCapybaras.id("parakeet_on_right_shoulder"));
 
-    private final ParrotModel model;
-    private final ParrotRenderState parakeetState = new ParrotRenderState();
+    private final ParakeetModel model;
+    private final ParakeetRenderState parakeetState = new ParakeetRenderState();
 
     public ParakeetOnShoulderLayer(RenderLayerParent<PlayerRenderState, PlayerModel> renderer, EntityModelSet modelSet) {
         super(renderer);
-        this.model = new ParrotModel(modelSet.bakeLayer(ModelLayers.PARROT));
+        this.model = new ParakeetModel(modelSet.bakeLayer(ModModelLayers.PARAKEET));
         this.parakeetState.pose = ParrotModel.Pose.ON_SHOULDER;
     }
 

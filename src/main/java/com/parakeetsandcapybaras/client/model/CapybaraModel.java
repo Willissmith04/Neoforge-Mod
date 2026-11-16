@@ -48,18 +48,19 @@ public class CapybaraModel extends EntityModel<CapybaraRenderState> {
                 CubeListBuilder.create().texOffs(0, 0).addBox(-5.0F, -4.5F, -8.0F, 10.0F, 9.0F, 16.0F),
                 PartPose.offset(0.0F, 14.5F, 0.0F));
 
-        // Head: 7 wide, 7 tall, 8 long, with a nose and two little ears attached to it.
+        // Head: 7 wide, 7 tall, 8 long, with a long snout and two little ears attached to it.
         PartDefinition head = root.addOrReplaceChild("head",
                 CubeListBuilder.create().texOffs(0, 25).addBox(-3.5F, -4.0F, -8.0F, 7.0F, 7.0F, 8.0F),
                 PartPose.offset(0.0F, 11.0F, -7.0F));
+        // Long, blunt snout: 5 wide, 5 tall and 4 long, darkening towards the tip.
         head.addOrReplaceChild("nose",
-                CubeListBuilder.create().texOffs(32, 25).addBox(-2.5F, -1.0F, -2.0F, 5.0F, 4.0F, 2.0F),
+                CubeListBuilder.create().texOffs(32, 25).addBox(-2.5F, -2.0F, -4.0F, 5.0F, 5.0F, 4.0F),
                 PartPose.offset(0.0F, 0.0F, -8.0F));
         head.addOrReplaceChild("right_ear",
-                CubeListBuilder.create().texOffs(32, 31).addBox(-1.0F, -2.0F, -0.5F, 2.0F, 2.0F, 1.0F),
+                CubeListBuilder.create().texOffs(52, 25).addBox(-1.0F, -2.0F, -0.5F, 2.0F, 2.0F, 1.0F),
                 PartPose.offset(-3.0F, -4.0F, -2.0F));
         head.addOrReplaceChild("left_ear",
-                CubeListBuilder.create().texOffs(38, 31).addBox(-1.0F, -2.0F, -0.5F, 2.0F, 2.0F, 1.0F),
+                CubeListBuilder.create().texOffs(52, 29).addBox(-1.0F, -2.0F, -0.5F, 2.0F, 2.0F, 1.0F),
                 PartPose.offset(3.0F, -4.0F, -2.0F));
 
         // Four short legs, 5 pixels tall.

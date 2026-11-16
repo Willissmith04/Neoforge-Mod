@@ -62,87 +62,107 @@ def fill(img, rect, color_fn):
 
 
 # ---------------------------------------------------------------------------------------------
-# Parakeets (uses the vanilla parrot model, 32x32 texture)
+# Parakeets (ParakeetModel, 64x32 texture)
 #
-# Style: chunky budgie look - a solid body colour, a checkered face, a checkered "scalloped"
-# wing pattern, a black eye with a dark cheek patch, a blue band (the cere) above a tan beak and
-# grey legs.
+# Style: chunky budgie look - a solid body colour, a checkered face, big checkered wing panels,
+# a black eye with a dark cheek patch, a blue band (the cere) above a yellow beak and grey legs.
+#
+# Where each box of ParakeetModel lives on the texture (texOffs, size W x H x D):
+#   body (0,0) 6x7x5     wings (22,0) 1x8x4    head (32,0) 5x5x5    cap (0,12) 6x1x6
+#   tail (24,12) 3x1x4   cere (38,12) 3x1x1    beak (38,15) 2x2x1   legs (46,12) 1x2x2
 # ---------------------------------------------------------------------------------------------
 PARAKEET_COLOURS = {
-    #            body      body_dark face      face_dark wing_lt   wing_dk   cheek     eye       cere
-    "green":    (0x2FA03C, 0x1E7A2A, 0xC6C55C, 0x9A9636, 0xC9C760, 0x8A8235, 0x4D4C7A, 0x2A2A2A, 0x3A44A0),
-    "sky_blue": (0x72B4C4, 0x4E8E9C, 0xE6E6E6, 0xB4B4B4, 0xD0D0D0, 0x7C7C7C, 0x25255A, 0x1A1A1A, 0x4A58B5),
-    "yellow":   (0xE8D84A, 0xC9B630, 0xF4EE9A, 0xE0D670, 0xF2EA8C, 0xD2C452, 0xF2EEDC, 0xB0303A, 0xD8A8A0),
-    "white":    (0xF0F0EC, 0xD2D2CC, 0xFFFFFF, 0xE2E2DE, 0xF4F4F0, 0xCDCDC8, 0xE8E8E8, 0xB0303A, 0xD8B4AC),
-    "violet":   (0x8466C8, 0x634AA4, 0xE6E6E6, 0xB4B4B4, 0xD0D0D0, 0x7C7C7C, 0x4A3A8A, 0x1A1A1A, 0x4A58B5),
-    "grey":     (0x9A9EA4, 0x767A80, 0xE6E6E6, 0xB4B4B4, 0xC8C8C8, 0x6E6E6E, 0x50545C, 0x1A1A1A, 0x6A5A88),
+    #            body      face      face_dk   wing_lt   wing_dk   cheek     eye       cere
+    "green":    (0x3DAA45, 0xE2D85A, 0x8C8232, 0xD8D060, 0x7A742C, 0x3A3A8A, 0x1A1A1A, 0x3C46C8),
+    "sky_blue": (0x4A7EDC, 0xF0F0F0, 0x5A5A5A, 0xC8C8C8, 0x6A6A6A, 0x2A2A80, 0x1A1A1A, 0x3C46C8),
+    "yellow":   (0xF0DC3C, 0xFFF4A0, 0xD8C860, 0xFFF0A0, 0xD6C250, 0xF4F0E0, 0xB0303A, 0xE0A8A0),
+    "white":    (0xF2F2EE, 0xFFFFFF, 0xD0D0CC, 0xFAFAF6, 0xCFCFCA, 0xE6E6E6, 0xB0303A, 0xE0B4AC),
+    "violet":   (0x7C58C8, 0xF0F0F0, 0x5A5A5A, 0xC8C8C8, 0x6A6A6A, 0x40308A, 0x1A1A1A, 0x3C46C8),
+    "grey":     (0x8E949C, 0xF0F0F0, 0x5A5A5A, 0xC0C0C0, 0x5E5E5E, 0x50546A, 0x1A1A1A, 0x6A5A88),
 }
-BEAK = rgb(0xA4994F)
-BEAK_DARK = rgb(0x857A38)
-LEGS = rgb(0x9A949C)
+BEAK = rgb(0xE6B634)
+BEAK_DARK = rgb(0xC08E1E)
+LEGS = rgb(0xB4ACBC)
+
+
+def mix(a, b, t):
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3)) + (255,)
 
 
 def make_parakeet(name, colours):
-    body, body_dark, face, face_dark, wing_lt, wing_dk, cheek, eye, cere = (rgb(c) for c in colours)
-    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    body, face, face_dk, wing_lt, wing_dk, cheek, eye, cere = (rgb(c) for c in colours)
+    face_mid = mix(face, face_dk, 0.45)
+    body_dark = shade(body, -28)
+    img = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
 
     def checker(light, dark):
         return lambda x, y, w, h: light if (x + y) % 2 == 0 else dark
 
     def body_shaded(x, y, w, h):
         # lighter at the top of the body, darker towards the bottom
-        return shade(body, 10 - int(20 * y / max(1, h - 1)))
+        return shade(body, 14 - int(30 * y / max(1, h - 1)))
 
-    # Head (2,2) 2x3x2: checkered face, eye in the middle, dark cheek patch at the front-bottom
-    head = Box(2, 2, 2, 3, 2).faces()
-    fill(img, head["top"], checker(face, face_dark))
-    fill(img, head["bottom"], lambda *a: face)
-    fill(img, head["front"], lambda *a: face)
-    fill(img, head["back"], checker(face_dark, face))
-    side = [["dark", "face"], ["eye", "face"], ["face", "cheek"]]  # [row][0 = back, 1 = front]
-    pick = {"eye": eye, "face": face, "dark": face_dark, "cheek": cheek}
-    fill(img, head["right"], lambda x, y, w, h: pick[side[y][x]])
-    fill(img, head["left"], lambda x, y, w, h: pick[side[y][1 - x]])
-
-    # Crown / forehead (10,0) 2x1x4
-    crown = Box(10, 0, 2, 1, 4).faces()
-    fill(img, crown["top"], checker(face, face_dark))
-    fill(img, crown["bottom"], lambda *a: face)
-    fill(img, crown["front"], lambda *a: face)
-    fill(img, crown["back"], lambda *a: face_dark)
-    fill(img, crown["right"], checker(face_dark, face))
-    fill(img, crown["left"], checker(face, face_dark))
-
-    # Beak: lower part (11,7), and the upper part (16,7) whose top is the blue cere band
-    for f in Box(11, 7, 1, 2, 1).faces().values():
-        fill(img, f, lambda x, y, w, h: BEAK_DARK if y == h - 1 and h > 1 else BEAK)
-    for key, f in Box(16, 7, 1, 2, 1).faces().items():
-        fill(img, f, lambda x, y, w, h, key=key: cere if (key == "top" or y == 0) else BEAK)
-
-    # Body (2,8) 3x6x3: one solid colour with soft shading
-    b = Box(2, 8, 3, 6, 3).faces()
-    fill(img, b["top"], lambda *a: shade(body, 12))
+    # Body (0,0) 6x7x5: one solid colour with soft shading
+    b = Box(0, 0, 6, 7, 5).faces()
+    fill(img, b["top"], lambda *a: shade(body, 16))
     fill(img, b["bottom"], lambda *a: body_dark)
     for key in ("front", "right", "left"):
         fill(img, b[key], body_shaded)
-    fill(img, b["back"], lambda x, y, w, h: shade(body_dark, 6 - int(12 * y / (h - 1))))
+    fill(img, b["back"], lambda x, y, w, h: shade(body_dark, 8 - int(16 * y / (h - 1))))
 
-    # Wings (19,8) 1x5x3: big checkered "scalloped" pattern
-    wing = Box(19, 8, 1, 5, 3).faces()
-    fill(img, wing["right"], checker(wing_lt, wing_dk))
-    fill(img, wing["left"], checker(wing_lt, wing_dk))
+    # Head (32,0) 5x5x5: face colour at the front, checkered at the back, eye and cheek patch
+    head = Box(32, 0, 5, 5, 5).faces()
+    fill(img, head["front"], lambda *a: face)
+    fill(img, head["bottom"], lambda *a: face)
+    fill(img, head["top"], lambda *a: face)
+    fill(img, head["back"], lambda x, y, w, h: face_dk if (x + y) % 2 == 0 else face_mid)
+    side = [  # [row][column], column 0 = back of the head, column 4 = front (next to the beak)
+        ["dk", "mid", "dk", "face", "face"],
+        ["mid", "dk", "eye", "face", "face"],
+        ["dk", "mid", "face", "cheek", "face"],
+        ["mid", "face", "face", "face", "face"],
+        ["face", "face", "face", "face", "face"],
+    ]
+    pick = {"dk": face_dk, "mid": face_mid, "face": face, "eye": eye, "cheek": cheek}
+    fill(img, head["right"], lambda x, y, w, h: pick[side[y][x]])
+    fill(img, head["left"], lambda x, y, w, h: pick[side[y][w - 1 - x]])
+
+    # Cap (0,12) 6x1x6: flat top of the head, face colour at the front, stripes at the back
+    cap = Box(0, 12, 6, 1, 6).faces()
+    fill(img, cap["top"], lambda x, y, w, h: face if y >= 3 else (face_mid if (x + y) % 2 else face_dk))
+    fill(img, cap["bottom"], lambda *a: face)
+    fill(img, cap["front"], lambda *a: face)
+    fill(img, cap["back"], checker(face_dk, face_mid))
+    fill(img, cap["right"], lambda x, y, w, h: face if x >= 3 else face_mid)
+    fill(img, cap["left"], lambda x, y, w, h: face if x <= 2 else face_mid)
+
+    # Cere (38,12) 3x1x1: the blue band above the beak
+    for f in Box(38, 12, 3, 1, 1).faces().values():
+        fill(img, f, lambda x, y, w, h: shade(cere, 18) if y == 0 and h == 1 and w == 3 else cere)
+
+    # Beak (38,15) 2x2x1
+    for f in Box(38, 15, 2, 2, 1).faces().values():
+        fill(img, f, lambda x, y, w, h: BEAK_DARK if y == h - 1 and h > 1 else BEAK)
+
+    # Wings (22,0) 1x8x4: big checkered panels, darker at the wing tips
+    wing = Box(22, 0, 1, 8, 4).faces()
+
+    def wing_px(x, y, w, h):
+        light, dark = (wing_lt, wing_dk) if y < h - 2 else (shade(wing_lt, -40), shade(wing_dk, -25))
+        return light if (x + y) % 2 == 0 else dark
+
+    fill(img, wing["right"], wing_px)
+    fill(img, wing["left"], wing_px)
     for key in ("top", "bottom", "front", "back"):
-        fill(img, wing[key], checker(wing_dk, wing_lt))
+        fill(img, wing[key], lambda *a: wing_dk)
 
-    # Tail (22,1) 3x4x1: dark body colour
-    for f in Box(22, 1, 3, 4, 1).faces().values():
-        fill(img, f, lambda x, y, w, h: shade(body_dark, -12) if y == h - 1 and h > 1 else body_dark)
+    # Tail (24,12) 3x1x4: dark body colour
+    for f in Box(24, 12, 3, 1, 4).faces().values():
+        fill(img, f, lambda *a: body_dark)
 
-    # Legs (14,18) 1x2x1
-    for f in Box(14, 18, 1, 2, 1).faces().values():
-        fill(img, f, lambda *a: LEGS)
-
-    # The parrot model's big head-feather (2,18) is left see-through: budgies don't have one.
+    # Legs (46,12) 1x2x2
+    for f in Box(46, 12, 1, 2, 2).faces().values():
+        fill(img, f, lambda x, y, w, h: shade(LEGS, -20) if y == h - 1 and h > 1 else LEGS)
 
     out = os.path.join(ROOT, "entity", "parakeet", f"parakeet_{name}.png")
     os.makedirs(os.path.dirname(out), exist_ok=True)
@@ -195,13 +215,13 @@ def make_capybara():
     def side_px(front_is_right):
         def px(x, y, w, h):
             dist = (w - 1 - x) if front_is_right else x       # 0 = at the front
-            base = muzzle if dist == 0 else (shade(fur, -14) if dist <= 2 else fur)
+            base = shade(fur, -16) if dist <= 1 else (shade(fur, -8) if dist <= 3 else fur)
             return blotchy(base, 10)(x, y, w, h)
         return px
 
     fill(img, head["right"], side_px(True))
     fill(img, head["left"], side_px(False))
-    fill(img, head["top"], lambda x, y, w, h: blotchy(muzzle if y == h - 1 else back, 10)(x, y, w, h))
+    fill(img, head["top"], lambda x, y, w, h: blotchy(shade(fur, -12) if y == h - 1 else back, 10)(x, y, w, h))
     fill(img, head["bottom"], blotchy(shade(fur, -10), 6))
     fill(img, head["front"], blotchy(muzzle, 6))
     fill(img, head["back"], blotchy(fur, 10))
@@ -212,17 +232,31 @@ def make_capybara():
     img.putpixel((hx + 3, hy + 1), eye)
     img.putpixel((hx + 2, hy + 1), eye)
 
-    # Nose (32,25) 5x4x2: the blunt, nearly black snout with nostrils
-    n = Box(32, 25, 5, 4, 2).faces()
-    for key, f in n.items():
-        fill(img, f, lambda x, y, w, h: shade(nose, rnd.randint(-3, 5)))
+    # Snout (32,25) 5x5x4: long and blunt, getting darker towards the tip, with nostrils
+    n = Box(32, 25, 5, 5, 4).faces()
+
+    def snout_side(front_is_right):
+        def px(x, y, w, h):
+            dist = (w - 1 - x) if front_is_right else x   # 0 = at the tip
+            base = nose if dist == 0 else (muzzle if dist == 1 else shade(fur, -16))
+            return shade(base, rnd.randint(-3, 4))
+        return px
+
+    fill(img, n["right"], snout_side(True))
+    fill(img, n["left"], snout_side(False))
+    fill(img, n["top"], lambda x, y, w, h: shade(nose if y == h - 1 else (muzzle if y == h - 2 else shade(fur, -16)), rnd.randint(-3, 4)))
+    fill(img, n["bottom"], lambda *a: shade(muzzle, rnd.randint(-3, 3)))
+    fill(img, n["front"], lambda *a: shade(nose, rnd.randint(-3, 4)))
+    fill(img, n["back"], lambda *a: muzzle)
     nx, ny, nw, nh = n["front"]
     img.putpixel((nx + 1, ny + 1), nostril)
     img.putpixel((nx + 3, ny + 1), nostril)
+    for x in range(1, nw - 1):
+        img.putpixel((nx + x, ny + nh - 2), shade(nose, -8))  # mouth line
 
-    # Ears (32,31) and (38,31) 2x2x1
-    for u in (32, 38):
-        for key, f in Box(u, 31, 2, 2, 1).faces().items():
+    # Ears (52,25) and (52,29) 2x2x1
+    for v in (25, 29):
+        for key, f in Box(52, v, 2, 2, 1).faces().items():
             fill(img, f, lambda x, y, w, h, key=key: ear_inner if key == "front" else shade(ear, rnd.randint(-4, 4)))
 
     # Legs (0,41) 3x5x3: fur at the top, dark feet at the bottom

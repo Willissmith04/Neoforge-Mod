@@ -3,6 +3,7 @@ package com.parakeetsandcapybaras.client;
 import com.parakeetsandcapybaras.ParakeetsAndCapybaras;
 import com.parakeetsandcapybaras.client.model.CapybaraModel;
 import com.parakeetsandcapybaras.client.model.ModModelLayers;
+import com.parakeetsandcapybaras.client.model.ParakeetModel;
 import com.parakeetsandcapybaras.client.renderer.BirdCageRenderer;
 import com.parakeetsandcapybaras.client.renderer.CapybaraRenderer;
 import com.parakeetsandcapybaras.client.renderer.ParakeetOnShoulderLayer;
@@ -35,6 +36,7 @@ public class ClientModEvents {
 
     @SubscribeEvent
     public static void registerModelLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(ModModelLayers.PARAKEET, ParakeetModel::createBodyLayer);
         event.registerLayerDefinition(ModModelLayers.CAPYBARA, CapybaraModel::createBodyLayer);
     }
 

@@ -5,20 +5,24 @@ import com.parakeetsandcapybaras.ParakeetsAndCapybaras;
 import com.parakeetsandcapybaras.entity.Parakeet;
 import java.util.EnumMap;
 import java.util.Map;
+import com.parakeetsandcapybaras.client.model.ModModelLayers;
+import com.parakeetsandcapybaras.client.model.ParakeetModel;
 import net.minecraft.client.model.ParrotModel;
-import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
 /**
- * Draws parakeets. It re-uses Minecraft's {@link ParrotModel} (the shape and all of its
- * animations: flying, sitting, dancing...) with our own parakeet textures.
+ * Draws parakeets using our own chunky {@link ParakeetModel} and the parakeet textures. It uses
+ * the same poses as the vanilla parrot ({@link ParrotModel.Pose}: flying, sitting, dancing...).
  */
-public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState, ParrotModel> {
-    /** Parakeets are drawn at 80% of a parrot's size. Change this number to make them bigger or smaller. */
-    public static final float SIZE = 0.8F;
+public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState, ParakeetModel> {
+    /**
+     * How big parakeets are drawn. At 0.7 they end up a little smaller than a vanilla parrot.
+     * Change this number to make them bigger or smaller.
+     */
+    public static final float SIZE = 0.7F;
     private static final Map<Parakeet.Variant, ResourceLocation> TEXTURES = new EnumMap<>(Parakeet.Variant.class);
 
     static {
@@ -28,7 +32,7 @@ public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState,
     }
 
     public ParakeetRenderer(EntityRendererProvider.Context context) {
-        super(context, new ParrotModel(context.bakeLayer(ModelLayers.PARROT)), 0.3F * SIZE);
+        super(context, new ParakeetModel(context.bakeLayer(ModModelLayers.PARAKEET)), 0.3F * SIZE);
     }
 
     public static ResourceLocation getTexture(Parakeet.Variant variant) {
@@ -50,7 +54,7 @@ public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState,
         float flapSpeed = Mth.lerp(partialTick, parakeet.oFlapSpeed, parakeet.flapSpeed);
         state.flapAngle = (Mth.sin(flap) + 1.0F) * flapSpeed;
 
-        // Pick the pose for the parrot model.
+        // Pick the pose (the same poses the parrot uses).
         if (parakeet.isPartyParakeet()) {
             state.pose = ParrotModel.Pose.PARTY;      // dancing to a jukebox!
         } else if (parakeet.isInSittingPose()) {

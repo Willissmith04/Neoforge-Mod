@@ -17,7 +17,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public class ModEntities {
     public static final DeferredRegister.Entities ENTITY_TYPES = DeferredRegister.createEntities(ParakeetsAndCapybaras.MOD_ID);
 
-    // A bit smaller than a parrot: 80% of the parrot's size (see ParakeetRenderer.SIZE).
+    // A bit smaller than a parrot (the drawn size is set by ParakeetRenderer.SIZE).
     public static final Supplier<EntityType<Parakeet>> PARAKEET = ENTITY_TYPES.registerEntityType(
             "parakeet",
             Parakeet::new,

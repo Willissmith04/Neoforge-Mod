@@ -4,7 +4,7 @@ A beginner-friendly Minecraft mod for **Minecraft 1.21.4** on **NeoForge** that 
 
 | | What it is |
 |---|---|
-| 🦜 **Parakeet** | A small budgie (80% of a parrot's size) based on the vanilla parrot, in 6 real budgie colours |
+| 🦜 **Parakeet** | A chunky little budgie (a bit smaller than a parrot) that behaves like the vanilla parrot, in 6 real budgie colours |
 | 🐹 **Capybara** | A calm, tameable rodent that lies flat ("sploots") when told to sit |
 | 🪺 **Bird Cage** (gold and iron) | Catch a parrot or parakeet and show it off in a cage |
 
@@ -101,6 +101,7 @@ src/main/java/com/parakeetsandcapybaras/
 │   └── CommonModEvents.java       attributes, spawn placement, creative tabs
 └── client/                        drawing things (only runs on the player's computer)
     ├── ClientModEvents.java       registers renderers and models
+    ├── model/ParakeetModel.java   the chunky budgie 3D model and its poses (walk, fly, sit, dance)
     ├── model/CapybaraModel.java   the capybara's 3D model and animations (incl. sitting pose)
     └── renderer/                  renderers for the mobs, the shoulder parakeet and the cage bird
 
@@ -142,7 +143,7 @@ Edit the biome lists in `data/parakeetsandcapybaras/tags/worldgen/biome/`. You c
 Edit `data/parakeetsandcapybaras/tags/item/parakeet_food.json` or `capybara_food.json`.
 
 ### Changing the parakeet's size
-Parakeets are drawn at 80% of a parrot's size. Change `SIZE = 0.8F` in
+Parakeets are drawn a little smaller than a parrot. Change `SIZE = 0.7F` in
 `client/renderer/ParakeetRenderer.java` (and the hitbox numbers in `registry/ModEntities.java`).
 
 ### Changing colours or textures
