@@ -4,7 +4,7 @@ A beginner-friendly Minecraft mod for **Minecraft 1.21.4** on **NeoForge** that 
 
 | | What it is |
 |---|---|
-| 🦜 **Parakeet** | A small bird based on the vanilla parrot, in 6 real budgie colours |
+| 🦜 **Parakeet** | A small budgie (80% of a parrot's size) based on the vanilla parrot, in 6 real budgie colours |
 | 🐹 **Capybara** | A calm, tameable rodent that lies flat ("sploots") when told to sit |
 | 🪺 **Bird Cage** (gold and iron) | Catch a parrot or parakeet and show it off in a cage |
 
@@ -140,6 +140,10 @@ Edit the biome lists in `data/parakeetsandcapybaras/tags/worldgen/biome/`. You c
 
 ### Changing taming food
 Edit `data/parakeetsandcapybaras/tags/item/parakeet_food.json` or `capybara_food.json`.
+
+### Changing the parakeet's size
+Parakeets are drawn at 80% of a parrot's size. Change `SIZE = 0.8F` in
+`client/renderer/ParakeetRenderer.java` (and the hitbox numbers in `registry/ModEntities.java`).
 
 ### Changing colours or textures
 Edit the PNGs in `assets/parakeetsandcapybaras/textures/`, or change the colours at the top of

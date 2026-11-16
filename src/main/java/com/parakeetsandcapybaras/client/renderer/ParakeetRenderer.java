@@ -17,6 +17,8 @@ import net.minecraft.util.Mth;
  * animations: flying, sitting, dancing...) with our own parakeet textures.
  */
 public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState, ParrotModel> {
+    /** Parakeets are drawn at 80% of a parrot's size. Change this number to make them bigger or smaller. */
+    public static final float SIZE = 0.8F;
     private static final Map<Parakeet.Variant, ResourceLocation> TEXTURES = new EnumMap<>(Parakeet.Variant.class);
 
     static {
@@ -26,7 +28,7 @@ public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState,
     }
 
     public ParakeetRenderer(EntityRendererProvider.Context context) {
-        super(context, new ParrotModel(context.bakeLayer(ModelLayers.PARROT)), 0.3F);
+        super(context, new ParrotModel(context.bakeLayer(ModelLayers.PARROT)), 0.3F * SIZE);
     }
 
     public static ResourceLocation getTexture(Parakeet.Variant variant) {
@@ -65,11 +67,10 @@ public class ParakeetRenderer extends MobRenderer<Parakeet, ParakeetRenderState,
         return getTexture(state.parakeetVariant);
     }
 
-    /** Babies (chicks) are drawn at half size. */
+    /** Draw parakeets a bit smaller than parrots, and babies (chicks) at half of that. */
     @Override
     protected void scale(ParakeetRenderState state, PoseStack poseStack) {
-        if (state.isBaby) {
-            poseStack.scale(0.5F, 0.5F, 0.5F);
-        }
+        float size = state.isBaby ? SIZE * 0.5F : SIZE;
+        poseStack.scale(size, size, size);
     }
 }

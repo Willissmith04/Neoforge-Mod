@@ -17,12 +17,12 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public class ModEntities {
     public static final DeferredRegister.Entities ENTITY_TYPES = DeferredRegister.createEntities(ParakeetsAndCapybaras.MOD_ID);
 
-    // Same size and settings as the vanilla parrot.
+    // A bit smaller than a parrot: 80% of the parrot's size (see ParakeetRenderer.SIZE).
     public static final Supplier<EntityType<Parakeet>> PARAKEET = ENTITY_TYPES.registerEntityType(
             "parakeet",
             Parakeet::new,
             MobCategory.CREATURE,
-            builder -> builder.sized(0.5F, 0.9F).eyeHeight(0.54F).passengerAttachments(0.4625F).clientTrackingRange(8));
+            builder -> builder.sized(0.4F, 0.72F).eyeHeight(0.43F).passengerAttachments(0.37F).clientTrackingRange(8));
 
     // passengerAttachments = how high (in blocks) a baby capybara sits when riding on an adult's back.
     public static final Supplier<EntityType<Capybara>> CAPYBARA = ENTITY_TYPES.registerEntityType(

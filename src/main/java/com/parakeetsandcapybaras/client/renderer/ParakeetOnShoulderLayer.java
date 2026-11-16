@@ -71,6 +71,10 @@ public class ParakeetOnShoulderLayer extends RenderLayer<PlayerRenderState, Play
                                   Parakeet.Variant variant, float yRot, float xRot, boolean leftShoulder) {
         poseStack.pushPose();
         poseStack.translate(leftShoulder ? 0.4F : -0.4F, state.isCrouching ? -1.3F : -1.5F, 0.0F);
+        // Shrink around the bird's feet (1.5 blocks below the model's origin) so it still sits on the shoulder.
+        poseStack.translate(0.0F, 1.5F, 0.0F);
+        poseStack.scale(ParakeetRenderer.SIZE, ParakeetRenderer.SIZE, ParakeetRenderer.SIZE);
+        poseStack.translate(0.0F, -1.5F, 0.0F);
         this.parakeetState.ageInTicks = state.ageInTicks;
         this.parakeetState.walkAnimationPos = state.walkAnimationPos;
         this.parakeetState.walkAnimationSpeed = state.walkAnimationSpeed;
